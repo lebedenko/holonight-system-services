@@ -16,6 +16,13 @@ struct AudioDevice {
   uint32_t id{0};
   QString name;
   QString description;
+  QString display_name;
+  QString raw_description;
+  QString vendor_name;
+  QString product_name;
+  QString port_name;
+  QString port_description;
+  QString form_factor;
   uint8_t volume{0};
   bool muted{false};
   bool is_default{false};

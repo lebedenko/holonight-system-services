@@ -18,6 +18,13 @@ AudioDevice makeSink(uint32_t dev_id, const char *name, uint8_t volume = 50,
   dev.id = dev_id;
   dev.name = QString::fromUtf8(name);
   dev.description = QStringLiteral("Test description");
+  dev.display_name = QStringLiteral("Test display name");
+  dev.raw_description = dev.description;
+  dev.vendor_name = QStringLiteral("Test vendor");
+  dev.product_name = QStringLiteral("Test product");
+  dev.port_name = QStringLiteral("analog-output-speaker");
+  dev.port_description = QStringLiteral("Speakers");
+  dev.form_factor = QStringLiteral("internal");
   dev.volume = volume;
   dev.muted = muted;
   dev.is_default = is_default;
@@ -95,6 +102,34 @@ TEST(AudioDeviceModel, DataReturnsAllRoles) {
   EXPECT_EQ(model.data(item, static_cast<int>(AudioDeviceModel::Role::Name))
                 .toString(),
             QStringLiteral("alsa_output"));
+  EXPECT_EQ(
+      model.data(item, static_cast<int>(AudioDeviceModel::Role::DisplayName))
+          .toString(),
+      QStringLiteral("Test display name"));
+  EXPECT_EQ(
+      model.data(item, static_cast<int>(AudioDeviceModel::Role::RawDescription))
+          .toString(),
+      QStringLiteral("Test description"));
+  EXPECT_EQ(
+      model.data(item, static_cast<int>(AudioDeviceModel::Role::VendorName))
+          .toString(),
+      QStringLiteral("Test vendor"));
+  EXPECT_EQ(
+      model.data(item, static_cast<int>(AudioDeviceModel::Role::ProductName))
+          .toString(),
+      QStringLiteral("Test product"));
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioDeviceModel::Role::PortName))
+                .toString(),
+            QStringLiteral("analog-output-speaker"));
+  EXPECT_EQ(
+      model
+          .data(item, static_cast<int>(AudioDeviceModel::Role::PortDescription))
+          .toString(),
+      QStringLiteral("Speakers"));
+  EXPECT_EQ(
+      model.data(item, static_cast<int>(AudioDeviceModel::Role::FormFactor))
+          .toString(),
+      QStringLiteral("internal"));
   EXPECT_EQ(model.data(item, static_cast<int>(AudioDeviceModel::Role::Volume))
                 .toUInt(),
             75U);
@@ -231,6 +266,22 @@ TEST(AudioDeviceModel, RoleNamesAreCorrect) {
             "name");
   EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::Description)),
             "description");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::DisplayName)),
+            "displayName");
+  EXPECT_EQ(
+      roles.value(static_cast<int>(AudioDeviceModel::Role::RawDescription)),
+      "rawDescription");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::VendorName)),
+            "vendorName");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::ProductName)),
+            "productName");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::PortName)),
+            "portName");
+  EXPECT_EQ(
+      roles.value(static_cast<int>(AudioDeviceModel::Role::PortDescription)),
+      "portDescription");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::FormFactor)),
+            "formFactor");
   EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::Volume)),
             "volume");
   EXPECT_EQ(roles.value(static_cast<int>(AudioDeviceModel::Role::Muted)),
@@ -269,6 +320,10 @@ TEST(AudioDeviceModel, DefaultDevicePopulatesWhenDefaultDeviceAdded) {
   const QVariantMap default_device = model.defaultDevice();
   EXPECT_EQ(default_device.value("deviceId").toUInt(), 2U);
   EXPECT_EQ(default_device.value("name").toString(), QStringLiteral("s2"));
+  EXPECT_EQ(default_device.value("displayName").toString(),
+            QStringLiteral("Test display name"));
+  EXPECT_EQ(default_device.value("rawDescription").toString(),
+            QStringLiteral("Test description"));
   EXPECT_TRUE(default_device.value("isDefault").toBool());
 }
 

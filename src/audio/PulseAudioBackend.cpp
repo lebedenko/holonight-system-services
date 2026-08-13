@@ -153,6 +153,40 @@ static QString bluetoothCodecFromProplist(const pa_proplist *proplist) {
   return QStringLiteral("PCM");
 }
 
+static QString propertyValue(const pa_proplist *proplist, const char *key) {
+  const char *value =
+      proplist != nullptr ? pa_proplist_gets(proplist, key) : nullptr;
+  return QString::fromUtf8(value != nullptr ? value : "");
+}
+
+static void populateDeviceIdentity(AudioDevice &device,
+                                   const pa_proplist *proplist,
+                                   const char *port_name,
+                                   const char *port_description) {
+  device.raw_description = device.description;
+  device.vendor_name = propertyValue(proplist, PA_PROP_DEVICE_VENDOR_NAME);
+  device.product_name = propertyValue(proplist, PA_PROP_DEVICE_PRODUCT_NAME);
+  device.form_factor = propertyValue(proplist, PA_PROP_DEVICE_FORM_FACTOR);
+  device.port_name = QString::fromUtf8(port_name != nullptr ? port_name : "");
+  device.port_description =
+      QString::fromUtf8(port_description != nullptr ? port_description : "");
+
+  const QString device_description =
+      propertyValue(proplist, PA_PROP_DEVICE_DESCRIPTION);
+  if (device.bus_type == QStringLiteral("Digital") &&
+      !device.port_description.isEmpty()) {
+    device.display_name = device.port_description;
+  } else if (!device_description.isEmpty()) {
+    device.display_name = device_description;
+  } else if (!device.product_name.isEmpty()) {
+    device.display_name = device.product_name;
+  } else if (!device.description.isEmpty()) {
+    device.display_name = device.description;
+  } else {
+    device.display_name = device.name;
+  }
+}
+
 void PulseAudioBackend::setPulseAudioSystem(PulseAudioSystem *sys) {
   s_pa_system = sys;
 }
@@ -277,6 +311,10 @@ PulseAudioBackend::Impl::sinkToDevice(const pa_sink_info *info) const {
                                   : "")
           : QString();
   dev.bus_type = classifyBusType(info->proplist, dev.name, active_port_name);
+  populateDeviceIdentity(
+      dev, info->proplist,
+      info->active_port != nullptr ? info->active_port->name : nullptr,
+      info->active_port != nullptr ? info->active_port->description : nullptr);
   dev.icon_name = iconNameFromProplist(info->proplist, /*is_sink=*/true,
                                        dev.name, active_port_name);
   if (dev.bus_type == QStringLiteral("Bluetooth")) {
@@ -306,6 +344,10 @@ PulseAudioBackend::Impl::sourceToDevice(const pa_source_info *info) const {
                                   : "")
           : QString();
   dev.bus_type = classifyBusType(info->proplist, dev.name, active_port_name);
+  populateDeviceIdentity(
+      dev, info->proplist,
+      info->active_port != nullptr ? info->active_port->name : nullptr,
+      info->active_port != nullptr ? info->active_port->description : nullptr);
   dev.icon_name = iconNameFromProplist(info->proplist, /*is_sink=*/false,
                                        dev.name, active_port_name);
   if (dev.bus_type == QStringLiteral("Bluetooth")) {

@@ -1027,6 +1027,13 @@ TEST(PulseAudioBackend, HdmiSinkOverridesGenericCardIconWithDisplayIcon) {
     sink.volume.values[1] = PA_VOLUME_NORM;
     sink.proplist = pa_proplist_new();
     pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_ICON_NAME, "audio-card");
+    pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_VENDOR_NAME, "NVIDIA");
+    pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_PRODUCT_NAME,
+                     "AD104 High Definition Audio Controller");
+    pa_sink_port_info port{};
+    port.name = "hdmi-output-0";
+    port.description = "HDMI / DisplayPort";
+    sink.active_port = &port;
 
     ASSERT_NE(mock_sys.sink_cb, nullptr);
     mock_sys.sink_cb(mock_sys.mock_context, &sink, 0, mock_sys.sink_userdata);
@@ -1036,6 +1043,13 @@ TEST(PulseAudioBackend, HdmiSinkOverridesGenericCardIconWithDisplayIcon) {
     const auto device = device_added_spy.first().at(0).value<AudioDevice>();
     EXPECT_EQ(device.bus_type, QStringLiteral("Digital"));
     EXPECT_EQ(device.icon_name, QStringLiteral("video-display"));
+    EXPECT_EQ(device.display_name, QStringLiteral("HDMI / DisplayPort"));
+    EXPECT_EQ(device.raw_description, QStringLiteral("Digital Stereo (HDMI)"));
+    EXPECT_EQ(device.vendor_name, QStringLiteral("NVIDIA"));
+    EXPECT_EQ(device.product_name,
+              QStringLiteral("AD104 High Definition Audio Controller"));
+    EXPECT_EQ(device.port_name, QStringLiteral("hdmi-output-0"));
+    EXPECT_EQ(device.port_description, QStringLiteral("HDMI / DisplayPort"));
 
     pa_proplist_free(sink.proplist);
   }
@@ -1162,6 +1176,10 @@ TEST(PulseAudioBackend, BluetoothCodecPrefersBluezCodecName) {
     sink.volume.values[1] = PA_VOLUME_NORM;
     sink.proplist = pa_proplist_new();
     pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_BUS, "bluetooth");
+    pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_DESCRIPTION, "PRO X 2");
+    pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_PRODUCT_NAME,
+                     "Logitech G PRO X 2");
+    pa_proplist_sets(sink.proplist, PA_PROP_DEVICE_FORM_FACTOR, "headset");
     pa_proplist_sets(sink.proplist, "bluez.codec_name", "AAC");
     pa_proplist_sets(sink.proplist, "bluetooth.codec", "SBC");
 
@@ -1172,6 +1190,9 @@ TEST(PulseAudioBackend, BluetoothCodecPrefersBluezCodecName) {
     auto dev = device_added_spy.first().at(0).value<AudioDevice>();
     EXPECT_EQ(dev.bus_type, QStringLiteral("Bluetooth"));
     EXPECT_EQ(dev.codec, QStringLiteral("AAC"));
+    EXPECT_EQ(dev.display_name, QStringLiteral("PRO X 2"));
+    EXPECT_EQ(dev.product_name, QStringLiteral("Logitech G PRO X 2"));
+    EXPECT_EQ(dev.form_factor, QStringLiteral("headset"));
 
     pa_proplist_free(sink.proplist);
   }
