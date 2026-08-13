@@ -1,2 +1,6 @@
 /build*/
 /compile_commands.json
+/.codex/
+/.claude/
+AGENTS.md
+CLAUDE.md
