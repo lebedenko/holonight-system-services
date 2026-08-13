@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.25)
+project(audio-consumer LANGUAGES CXX)
+find_package(HoloNightSystemServices REQUIRED)
+add_executable(audio-consumer main.cpp)
+target_link_libraries(audio-consumer PRIVATE HoloNightSystem::Audio)
