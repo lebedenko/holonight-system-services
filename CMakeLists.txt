@@ -7,6 +7,8 @@ set(CMAKE_AUTOMOC ON)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
+install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 option(BUILD_TESTS "Build unit and package-consumer tests" OFF)
 
