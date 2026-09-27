@@ -14,6 +14,8 @@ const QString drivePath = root + QStringLiteral("/drives/usb");
 const QString volumePath = root + QStringLiteral("/block_devices/sdb1");
 const QString driveInterface = QStringLiteral("org.freedesktop.UDisks2.Drive");
 const QString blockInterface = QStringLiteral("org.freedesktop.UDisks2.Block");
+const QString partitionInterface =
+    QStringLiteral("org.freedesktop.UDisks2.Partition");
 const QString fsInterface =
     QStringLiteral("org.freedesktop.UDisks2.Filesystem");
 class FakeUDisks : public QDBusVirtualObject {
@@ -161,6 +163,111 @@ TEST_F(UDisksTest, DiscoveryInvalidationHotplugAndIdentity) {
   fake.addVolume(interfaces);
   ASSERT_TRUE(QTest::qWaitFor([&] { return c.volumes()->rowCount() == 1; }));
   EXPECT_NE(c.volumes()->items().first().id, v.id);
+}
+TEST_F(UDisksTest, PresentationMetadataTracksUDisksSnapshots) {
+  UDisks2Backend backend(QDBusConnection::sessionBus(), service);
+  StorageController c(&backend);
+  ASSERT_TRUE(QTest::qWaitFor([&] { return c.available(); }));
+  const auto initial = c.volumes()->items().first();
+  EXPECT_EQ(initial.label, "Data");
+  EXPECT_TRUE(initial.hintName.isEmpty());
+  EXPECT_TRUE(initial.hintIconName.isEmpty());
+  EXPECT_TRUE(initial.hintSymbolicIconName.isEmpty());
+  EXPECT_TRUE(initial.partitionName.isEmpty());
+  EXPECT_EQ(initial.partitionNumber, 0U);
+  EXPECT_TRUE(c.drives()->items().first().media.isEmpty());
+  EXPECT_TRUE(c.drives()->items().first().mediaCompatibility.isEmpty());
+
+  auto &block = fake.objects[QDBusObjectPath(volumePath)][blockInterface];
+  block["HintName"] = "Archive";
+  block["HintIconName"] = "drive-removable-media";
+  block["HintSymbolicIconName"] = "drive-removable-media-symbolic";
+  fake.objects[QDBusObjectPath(volumePath)][partitionInterface] = {
+      {"Name", "Photos"}, {"Number", 1U}};
+  auto &drive = fake.objects[QDBusObjectPath(drivePath)][driveInterface];
+  drive["Media"] = "thumb";
+  drive["MediaCompatibility"] = QStringList{"thumb", "flash"};
+  fake.changed();
+  ASSERT_TRUE(QTest::qWaitFor([&] {
+    return c.volumes()->items().first().hintName == "Archive" &&
+           c.drives()->items().first().media == "thumb";
+  }));
+  const auto volume = c.volumes()->items().first();
+  const auto media = c.drives()->items().first();
+  EXPECT_EQ(volume.id, initial.id);
+  EXPECT_EQ(volume.label, "Data");
+  EXPECT_EQ(volume.hintIconName, "drive-removable-media");
+  EXPECT_EQ(volume.hintSymbolicIconName, "drive-removable-media-symbolic");
+  EXPECT_EQ(volume.partitionName, "Photos");
+  EXPECT_EQ(volume.partitionNumber, 1U);
+  EXPECT_EQ(media.mediaCompatibility, (QStringList{"thumb", "flash"}));
+
+  const auto volumeIndex = c.volumes()->index(0);
+  const auto driveIndex = c.drives()->index(0);
+  const auto volumeRoles = c.volumes()->roleNames();
+  const auto driveRoles = c.drives()->roleNames();
+  EXPECT_EQ(volumeRoles.value(StorageVolumeModel::HintNameRole), "hintName");
+  EXPECT_EQ(volumeRoles.value(StorageVolumeModel::HintIconNameRole),
+            "hintIconName");
+  EXPECT_EQ(volumeRoles.value(StorageVolumeModel::HintSymbolicIconNameRole),
+            "hintSymbolicIconName");
+  EXPECT_EQ(volumeRoles.value(StorageVolumeModel::PartitionNameRole),
+            "partitionName");
+  EXPECT_EQ(volumeRoles.value(StorageVolumeModel::PartitionNumberRole),
+            "partitionNumber");
+  EXPECT_EQ(driveRoles.value(StorageDriveModel::MediaRole), "media");
+  EXPECT_EQ(driveRoles.value(StorageDriveModel::MediaCompatibilityRole),
+            "mediaCompatibility");
+  EXPECT_EQ(c.volumes()
+                ->data(volumeIndex, StorageVolumeModel::HintNameRole)
+                .toString(),
+            "Archive");
+  EXPECT_EQ(c.volumes()
+                ->data(volumeIndex, StorageVolumeModel::HintIconNameRole)
+                .toString(),
+            "drive-removable-media");
+  EXPECT_EQ(
+      c.volumes()
+          ->data(volumeIndex, StorageVolumeModel::HintSymbolicIconNameRole)
+          .toString(),
+      "drive-removable-media-symbolic");
+  EXPECT_EQ(c.volumes()
+                ->data(volumeIndex, StorageVolumeModel::PartitionNameRole)
+                .toString(),
+            "Photos");
+  EXPECT_EQ(c.volumes()
+                ->data(volumeIndex, StorageVolumeModel::PartitionNumberRole)
+                .toUInt(),
+            1U);
+  EXPECT_EQ(
+      c.drives()->data(driveIndex, StorageDriveModel::MediaRole).toString(),
+      "thumb");
+  EXPECT_EQ(c.drives()
+                ->data(driveIndex, StorageDriveModel::MediaCompatibilityRole)
+                .toStringList(),
+            (QStringList{"thumb", "flash"}));
+
+  block.remove("HintName");
+  block.remove("HintIconName");
+  block.remove("HintSymbolicIconName");
+  fake.objects[QDBusObjectPath(volumePath)].remove(partitionInterface);
+  drive.remove("Media");
+  drive.remove("MediaCompatibility");
+  fake.changed({"HintName", "HintIconName", "HintSymbolicIconName"});
+  ASSERT_TRUE(QTest::qWaitFor([&] {
+    return c.volumes()->items().first().hintName.isEmpty() &&
+           c.drives()->items().first().media.isEmpty();
+  }));
+  EXPECT_EQ(c.volumes()->items().first(), initial);
+  EXPECT_TRUE(c.drives()->items().first().mediaCompatibility.isEmpty());
+
+  block["IdLabel"] = "";
+  fake.changed({"IdLabel"});
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] { return c.volumes()->items().first().label.isEmpty(); }));
+  EXPECT_TRUE(c.volumes()->items().first().hintName.isEmpty());
+  EXPECT_TRUE(c.volumes()->items().first().partitionName.isEmpty());
+  EXPECT_EQ(c.volumes()->items().first().device, "/dev/sdb1");
 }
 TEST_F(UDisksTest, InitialEnumerationRaceDoesNotResurrectRemovedDevice) {
   fake.holdSnapshots = true;

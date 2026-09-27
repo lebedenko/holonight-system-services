@@ -227,6 +227,9 @@ void UDisks2Backend::publish(const StorageObjects &objects) {
       drive.connectionBus =
           props.value(QStringLiteral("ConnectionBus")).toString();
       drive.siblingId = props.value(QStringLiteral("SiblingId")).toString();
+      drive.media = props.value(QStringLiteral("Media")).toString();
+      drive.mediaCompatibility =
+          props.value(QStringLiteral("MediaCompatibility")).toStringList();
       drive.removable = props.value(QStringLiteral("Removable")).toBool();
       drive.mediaRemovable =
           props.value(QStringLiteral("MediaRemovable")).toBool();
@@ -247,6 +250,11 @@ void UDisks2Backend::publish(const StorageObjects &objects) {
           key(pathValue(props.value(QStringLiteral("CryptoBackingDevice"))),
               blockInterface));
       volume.label = props.value(QStringLiteral("IdLabel")).toString();
+      volume.hintName = props.value(QStringLiteral("HintName")).toString();
+      volume.hintIconName =
+          props.value(QStringLiteral("HintIconName")).toString();
+      volume.hintSymbolicIconName =
+          props.value(QStringLiteral("HintSymbolicIconName")).toString();
       volume.device = bytePath(
           props.value(QStringLiteral("PreferredDevice")).toByteArray());
       volume.filesystemType = props.value(QStringLiteral("IdType")).toString();
@@ -265,6 +273,9 @@ void UDisks2Backend::publish(const StorageObjects &objects) {
                 .contains(QStringLiteral("org.freedesktop.UDisks2.Loop"));
       const auto partition = interfaces.value(partitionInterface);
       volume.partitionType = partition.value(QStringLiteral("Type")).toString();
+      volume.partitionName = partition.value(QStringLiteral("Name")).toString();
+      volume.partitionNumber =
+          partition.value(QStringLiteral("Number")).toUInt();
       volume.partitionContainer =
           partition.value(QStringLiteral("IsContainer")).toBool() ||
           (interfaces.contains(

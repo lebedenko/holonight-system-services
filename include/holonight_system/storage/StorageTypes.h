@@ -13,6 +13,8 @@ struct StorageDrive {
   QString serial;
   QString connectionBus;
   QString siblingId;
+  QString media;
+  QStringList mediaCompatibility;
   bool removable = false;
   bool mediaRemovable = false;
   bool mediaPresent = false;
@@ -30,6 +32,11 @@ struct StorageVolume {
   QString filesystemType;
   QString usage;
   QString partitionType;
+  QString partitionName;
+  quint32 partitionNumber = 0;
+  QString hintName;
+  QString hintIconName;
+  QString hintSymbolicIconName;
   QString cryptoBackingId;
   QStringList mountPoints;
   quint64 capacity = 0;

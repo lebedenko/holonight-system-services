@@ -37,6 +37,17 @@ current device lifetime. Use IDs, never rows, object paths or UUIDs, for operati
 `HintSystem` is an authorization hint, not a hide flag. `removable` includes external SSDs independently of
 `mediaRemovable`. Cleartext volumes inherit their backing drive association.
 
+For a display name, prefer the volume's nonempty `hintName`, then filesystem `label`, then a meaningful
+`partitionName`. Treat generic partition names such as “Basic data partition” as weak metadata. If none is useful,
+format `capacity` into a localized name such as “249 GB Volume”; use `device` (for example `/dev/sdb1`) for
+technical details or only as a final fallback. `partitionNumber` is available for context when a partition name
+needs disambiguation. The library leaves name selection and translation to consumers.
+
+For icons, use `hintIconName` or `hintSymbolicIconName` when the selected theme supplies the requested icon.
+Otherwise, use drive `media`, `mediaCompatibility`, `optical`, `removable` and `mediaRemovable` to choose a
+standard optical, flash, removable drive or hard disk icon. Consumers own theme lookup and visual style; the
+library provides the raw UDisks facts. See the [Icon Naming Specification](https://specifications.freedesktop.org/icon-naming/latest/).
+
 `mount`, `unmount`, `eject` and `powerOff` return request IDs immediately; `operationFinished(StorageResult)`
 reports completion, raw error names/messages and the mount path. Upstream state is refreshed before reporting
 completion. Consumers translate errors and navigation explanations. `availableChanged` and
@@ -56,6 +67,7 @@ agent for operations requiring authorization. Discovery can activate the install
 does not provide an agent, escalate privileges itself, auto-mount media, unlock encrypted storage or retry failed
 operations. A missing daemon leaves Storage unavailable; applications remain independent.
 
-The private backend uses the upstream [Drive API](https://storaged.org/doc/udisks2-api/latest/gdbus-org.freedesktop.UDisks2.Drive.html)
-and [Block API](https://storaged.org/doc/udisks2-api/latest/gdbus-org.freedesktop.UDisks2.Block.html).
+The private backend uses the upstream [Drive API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Drive.html),
+[Block API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Block.html) and
+[Partition API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Partition.html).
 See [the local SDD](docs/sdd/udisks2-storage/README.md) for acceptance evidence and pending ecosystem checks.

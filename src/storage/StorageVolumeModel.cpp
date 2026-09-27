@@ -44,6 +44,16 @@ QVariant StorageVolumeModel::data(const QModelIndex &index, int role) const {
     return QVariant::fromValue(item.canMount);
   case CanUnmountRole:
     return QVariant::fromValue(item.canUnmount);
+  case PartitionNameRole:
+    return QVariant::fromValue(item.partitionName);
+  case PartitionNumberRole:
+    return QVariant::fromValue(item.partitionNumber);
+  case HintNameRole:
+    return QVariant::fromValue(item.hintName);
+  case HintIconNameRole:
+    return QVariant::fromValue(item.hintIconName);
+  case HintSymbolicIconNameRole:
+    return QVariant::fromValue(item.hintSymbolicIconName);
   default:
     return {};
   }
@@ -65,7 +75,12 @@ QHash<int, QByteArray> StorageVolumeModel::roleNames() const {
           {PartitionContainerRole, "partitionContainer"},
           {LockedRole, "locked"},
           {CanMountRole, "canMount"},
-          {CanUnmountRole, "canUnmount"}};
+          {CanUnmountRole, "canUnmount"},
+          {PartitionNameRole, "partitionName"},
+          {PartitionNumberRole, "partitionNumber"},
+          {HintNameRole, "hintName"},
+          {HintIconNameRole, "hintIconName"},
+          {HintSymbolicIconNameRole, "hintSymbolicIconName"}};
 }
 std::optional<StorageVolume> StorageVolumeModel::find(const QString &id) const {
   for (const auto &item : items_)

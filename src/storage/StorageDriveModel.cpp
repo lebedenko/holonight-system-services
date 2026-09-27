@@ -34,6 +34,10 @@ QVariant StorageDriveModel::data(const QModelIndex &index, int role) const {
     return QVariant::fromValue(item.canEject);
   case CanPowerOffRole:
     return QVariant::fromValue(item.canPowerOff);
+  case MediaRole:
+    return QVariant::fromValue(item.media);
+  case MediaCompatibilityRole:
+    return QVariant::fromValue(item.mediaCompatibility);
   default:
     return {};
   }
@@ -50,7 +54,9 @@ QHash<int, QByteArray> StorageDriveModel::roleNames() const {
           {MediaPresentRole, "mediaPresent"},
           {OpticalRole, "optical"},
           {CanEjectRole, "canEject"},
-          {CanPowerOffRole, "canPowerOff"}};
+          {CanPowerOffRole, "canPowerOff"},
+          {MediaRole, "media"},
+          {MediaCompatibilityRole, "mediaCompatibility"}};
 }
 std::optional<StorageDrive> StorageDriveModel::find(const QString &id) const {
   for (const auto &item : items_)
