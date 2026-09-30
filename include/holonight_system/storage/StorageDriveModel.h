@@ -22,7 +22,8 @@ public:
     CanEjectRole,
     CanPowerOffRole,
     MediaRole,
-    MediaCompatibilityRole
+    MediaCompatibilityRole,
+    RotationRateRole
   };
   int rowCount(const QModelIndex &parent = {}) const override;
   QVariant data(const QModelIndex &index, int role) const override;

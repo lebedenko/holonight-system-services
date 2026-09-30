@@ -238,6 +238,8 @@ void UDisks2Backend::publish(const StorageObjects &objects) {
       drive.optical = props.value(QStringLiteral("Optical")).toBool();
       drive.canEject = props.value(QStringLiteral("Ejectable")).toBool();
       drive.canPowerOff = props.value(QStringLiteral("CanPowerOff")).toBool();
+      if (props.contains(QStringLiteral("RotationRate")))
+        drive.rotationRate = props.value(QStringLiteral("RotationRate")).toInt();
       drives.append(drive);
     }
     if (interfaces.contains(blockInterface)) {

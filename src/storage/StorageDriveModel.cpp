@@ -38,6 +38,8 @@ QVariant StorageDriveModel::data(const QModelIndex &index, int role) const {
     return QVariant::fromValue(item.media);
   case MediaCompatibilityRole:
     return QVariant::fromValue(item.mediaCompatibility);
+  case RotationRateRole:
+    return item.rotationRate ? QVariant(*item.rotationRate) : QVariant{};
   default:
     return {};
   }
@@ -56,7 +58,8 @@ QHash<int, QByteArray> StorageDriveModel::roleNames() const {
           {CanEjectRole, "canEject"},
           {CanPowerOffRole, "canPowerOff"},
           {MediaRole, "media"},
-          {MediaCompatibilityRole, "mediaCompatibility"}};
+          {MediaCompatibilityRole, "mediaCompatibility"},
+          {RotationRateRole, "rotationRate"}};
 }
 std::optional<StorageDrive> StorageDriveModel::find(const QString &id) const {
   for (const auto &item : items_)

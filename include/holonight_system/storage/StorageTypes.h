@@ -3,6 +3,7 @@
 #include <QList>
 #include <QMetaType>
 #include <QStringList>
+#include <optional>
 
 namespace HoloNight::System {
 
@@ -21,6 +22,7 @@ struct StorageDrive {
   bool optical = false;
   bool canEject = false;
   bool canPowerOff = false;
+  std::optional<int> rotationRate;
   bool operator==(const StorageDrive &) const = default;
 };
 

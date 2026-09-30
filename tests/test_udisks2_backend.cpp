@@ -176,6 +176,8 @@ TEST_F(UDisksTest, PresentationMetadataTracksUDisksSnapshots) {
   EXPECT_TRUE(initial.partitionName.isEmpty());
   EXPECT_EQ(initial.partitionNumber, 0U);
   EXPECT_TRUE(c.drives()->items().first().media.isEmpty());
+  EXPECT_FALSE(c.drives()->items().first().rotationRate);
+  EXPECT_FALSE(c.drives()->index(0).data(StorageDriveModel::RotationRateRole).isValid());
   EXPECT_TRUE(c.drives()->items().first().mediaCompatibility.isEmpty());
 
   auto &block = fake.objects[QDBusObjectPath(volumePath)][blockInterface];
@@ -418,4 +420,41 @@ TEST_F(UDisksTest, MountReplyForRemovedVolumeCannotNavigateUsingStalePath) {
   const auto result = qvariant_cast<StorageResult>(spy.first().first());
   EXPECT_FALSE(result.succeeded());
   EXPECT_TRUE(result.mountPath.isEmpty());
+}
+
+TEST_F(UDisksTest, RotationRatePreservesAbsenceAndUpdatesStableRows) {
+  fake.objects[QDBusObjectPath(drivePath)][driveInterface]["RotationRate"] = 0;
+  UDisks2Backend backend(QDBusConnection::sessionBus(), service);
+  StorageController c(&backend);
+  ASSERT_TRUE(QTest::qWaitFor([&] { return c.available(); }));
+  auto *model = c.drives();
+  const QPersistentModelIndex index(model->index(0));
+  const auto id = model->items().first().id;
+  EXPECT_EQ(model->items().first().rotationRate, 0);
+  EXPECT_EQ(model->roleNames().value(StorageDriveModel::RotationRateRole),
+            "rotationRate");
+  EXPECT_EQ(index.data(StorageDriveModel::RotationRateRole).toInt(), 0);
+  QSignalSpy changes(model, &QAbstractItemModel::dataChanged);
+  auto &props = fake.objects[QDBusObjectPath(drivePath)][driveInterface];
+  for (int rate : {-1, 7200, 0}) {
+    props["RotationRate"] = rate;
+    auto signal = QDBusMessage::createSignal(
+        drivePath, "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    signal << driveInterface << QVariantMap{{"RotationRate", rate}} << QStringList{};
+    bus.send(signal);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return model->items().first().rotationRate == rate; }));
+    EXPECT_EQ(index.data(StorageDriveModel::RotationRateRole).toInt(), rate);
+    EXPECT_EQ(model->items().first().id, id);
+    EXPECT_EQ(model->rowCount(), 1);
+  }
+  props.remove("RotationRate");
+  auto signal = QDBusMessage::createSignal(
+      drivePath, "org.freedesktop.DBus.Properties", "PropertiesChanged");
+  signal << driveInterface << QVariantMap{} << QStringList{"RotationRate"};
+  bus.send(signal);
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !model->items().first().rotationRate; }));
+  EXPECT_FALSE(index.data(StorageDriveModel::RotationRateRole).isValid());
+  EXPECT_TRUE(index.isValid());
+  EXPECT_EQ(changes.count(), 4);
 }
