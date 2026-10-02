@@ -9,3 +9,6 @@ application presentation policy to shared classes.
 Use C++23 and the checked-in CMake package. Configure with `cmake -S . -B build -G Ninja -DBUILD_TESTS=ON`, build
 with `cmake --build build`, and run `ctest --test-dir build --output-on-failure`. Each component must retain an
 install-tree consumer test and deterministic backend-interface coverage.
+
+Developer tooling uses `build/debug`, `build/test`, `build/release` and module-owned `build/deps`.
+See tooling/README.md; run task tooling:refresh explicitly after configuring/building for editor metadata.

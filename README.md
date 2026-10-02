@@ -10,8 +10,8 @@ QML registration, translations, filtering and application policy.
 
 ```sh
 cmake -S . -B build -G Ninja -DBUILD_TESTS=ON
-cmake --build build
-ctest --test-dir build --output-on-failure
+cmake --build build/debug
+ctest --test-dir build/test --output-on-failure
 ```
 
 Components are enabled by default. `-DBUILD_AUDIO=OFF` builds Storage without libpulse; `-DBUILD_STORAGE=OFF`
@@ -71,3 +71,8 @@ The private backend uses the upstream [Drive API](https://storaged.org/udisks/do
 [Block API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Block.html) and
 [Partition API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Partition.html).
 See [the local SDD](docs/sdd/udisks2-storage/README.md) for acceptance evidence and pending ecosystem checks.
+
+## Standalone developer tooling
+
+See [tooling/README.md](tooling/README.md) for presets, local dependency overrides, editor refresh,
+`task tooling:doctor`, and the independent Serena project.
