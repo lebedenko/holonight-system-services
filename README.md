@@ -76,3 +76,21 @@ See [the local SDD](docs/sdd/udisks2-storage/README.md) for acceptance evidence 
 
 See [tooling/README.md](tooling/README.md) for presets, local dependency overrides, editor refresh,
 `task tooling:doctor`, and the independent Serena project.
+
+
+## Local CI rehearsal
+
+Run `task ci` with Git, Python 3, Task and an accessible Docker daemon; Podman is
+used when Docker is absent. The pinned linux/amd64 images need an amd64 host or
+emulation and registry access. Local and hosted CI share independent Debug/Ninja
+lanes for Audio only, Storage only and both components, each with provider and
+install-tree consumer tests. Storage tests use their private D-Bus session. The
+existing licensing job uses the same immutable REUSE 6.2.0 image locally/remotely.
+
+Tracked edits and non-ignored new files enter read-only snapshots; untracked inputs
+are reported to add before pushing. Every lane uses a disposable writable copy and
+fresh build tree. Existing development builds stay untouched; only container layers
+may be reused. Complete logs, revision/dirty state, image identity, tool versions
+and results go to ignored `build/ci/`. Required failures return nonzero and print
+complete failure logs. Run launcher regressions with `python3 scripts/ci/test_launcher.py`.
+Publication, releases and artifact uploads remain remote operations.

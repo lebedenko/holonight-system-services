@@ -2,7 +2,8 @@ file(REMOVE_RECURSE "${TEST_BINARY_DIR}")
 file(MAKE_DIRECTORY "${TEST_BINARY_DIR}/provider" "${TEST_BINARY_DIR}/prefix" "${TEST_BINARY_DIR}/consumer")
 
 execute_process(COMMAND ${CMAKE_COMMAND} -S "${PROVIDER_SOURCE_DIR}" -B "${TEST_BINARY_DIR}/provider"
-  -DBUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=${TEST_BINARY_DIR}/prefix RESULT_VARIABLE configure_result)
+  -DBUILD_TESTS=OFF -DBUILD_AUDIO=ON -DBUILD_STORAGE=OFF
+  -DCMAKE_INSTALL_PREFIX=${TEST_BINARY_DIR}/prefix RESULT_VARIABLE configure_result)
 if(NOT configure_result EQUAL 0)
   message(FATAL_ERROR "Provider configure failed")
 endif()
@@ -22,4 +23,8 @@ endif()
 execute_process(COMMAND ${CMAKE_COMMAND} --build "${TEST_BINARY_DIR}/consumer" RESULT_VARIABLE consumer_build_result)
 if(NOT consumer_build_result EQUAL 0)
   message(FATAL_ERROR "Audio consumer build failed")
+endif()
+execute_process(COMMAND "${TEST_BINARY_DIR}/consumer/audio-consumer" RESULT_VARIABLE consumer_result)
+if(NOT consumer_result EQUAL 0)
+  message(FATAL_ERROR "Audio consumer run failed")
 endif()

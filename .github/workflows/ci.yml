@@ -1,0 +1,14 @@
+name: Build and component checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [build-all, build-audio, build-storage]
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/ci/run.py --lane ${{ matrix.lane }}
