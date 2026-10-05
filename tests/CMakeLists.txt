@@ -33,3 +33,31 @@ if(BUILD_STORAGE)
       -DTEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/storage-install-consumer
       -P ${CMAKE_CURRENT_SOURCE_DIR}/run_storage_consumer.cmake)
 endif()
+
+if(BUILD_COMPOSITOR)
+  target_compile_definitions(holonight_system_compositor PRIVATE HOLONIGHT_TESTS)
+  add_executable(holonight_system_compositor_tests main.cpp test_hyprland_ipc.cpp
+    test_hyprland_ipc_client.cpp test_hyprland_backend.cpp test_sway_ipc.cpp
+    test_sway_backend.cpp test_window_activation.cpp test_window_presentation.cpp)
+  if(BUILD_COMPOSITOR_WAYLAND)
+    target_sources(holonight_system_compositor_tests PRIVATE test_generic_workspace.cpp test_foreign_toplevel.cpp)
+  endif()
+  target_include_directories(holonight_system_compositor_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/compositor)
+  target_compile_definitions(holonight_system_compositor_tests PRIVATE HOLONIGHT_TESTS)
+  target_link_libraries(holonight_system_compositor_tests PRIVATE HoloNightSystem::Compositor Qt6::Network Qt6::Test GTest::gtest GTest::gmock)
+  add_test(NAME holonight_system_compositor_tests COMMAND holonight_system_compositor_tests)
+endif()
+
+if(BUILD_COMPOSITOR AND BUILD_COMPOSITOR_WAYLAND)
+  add_executable(labwc_protocol_smoke labwc_protocol_smoke.cpp)
+  target_include_directories(labwc_protocol_smoke PRIVATE ${PROJECT_SOURCE_DIR}/src/compositor ${PROJECT_BINARY_DIR}/src/compositor)
+  target_link_libraries(labwc_protocol_smoke PRIVATE HoloNightSystem::Compositor Qt6::Gui Qt6::WaylandClient)
+endif()
+
+if(BUILD_COMPOSITOR)
+  add_test(NAME holonight_system_compositor_install_consumer
+    COMMAND ${CMAKE_COMMAND} -DPROVIDER_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+      -DTEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/compositor-install-consumer
+      -DCOMPOSITOR_WAYLAND=${BUILD_COMPOSITOR_WAYLAND}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/run_compositor_consumer.cmake)
+endif()

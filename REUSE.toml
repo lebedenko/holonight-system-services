@@ -4,3 +4,15 @@ path = ["**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Andrii L <lebeden@gmail.com>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = "protocols/ext-workspace-v1.xml"
+precedence = "override"
+SPDX-FileCopyrightText = ["2019 Christopher Billington", "2020 Ilia Bozhinov", "2022 Victoria Brekenfeld"]
+SPDX-License-Identifier = "HPND-sell-variant"
+
+[[annotations]]
+path = "protocols/wlr-foreign-toplevel-management-unstable-v1.xml"
+precedence = "override"
+SPDX-FileCopyrightText = "2018 Ilia Bozhinov"
+SPDX-License-Identifier = "HPND-sell-variant"

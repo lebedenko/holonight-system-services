@@ -4,6 +4,7 @@ Reusable Qt/C++ system integration for independent HoloNight applications. Consu
 QML registration, translations, filtering and application policy.
 
 - `HoloNightSystem::Audio`: PulseAudio integration, controller, device and stream models, and value types.
+- `HoloNightSystem::Compositor`: compositor snapshots, activation/workspace contracts and conservative title-bar observations.
 - `HoloNightSystem::Storage`: UDisks2 discovery, drive/volume models and asynchronous manual storage operations.
 
 ## Build and consume
@@ -94,3 +95,13 @@ may be reused. Complete logs, revision/dirty state, image identity, tool version
 and results go to ignored `build/ci/`. Required failures return nonzero and print
 complete failure logs. Run launcher regressions with `python3 scripts/ci/test_launcher.py`.
 Publication, releases and artifact uploads remain remote operations.
+
+## Compositor contract
+
+Include `<holonight_system/compositor/CompositorFactory.h>` and link `HoloNightSystem::Compositor`. `createCompositorBackend()` selects the backend using desktop tokens before session markers; conflicting evidence uses generic Wayland. Explicit backend selection is available for shell plugins. Concrete backends, transports and protocol bindings remain private. No running shell or daemon is required.
+
+Snapshot window identifiers are opaque. `externalTitleBarForApplication(snapshot, pid, app_id)` accepts only one exact native PID/app ID match. It never uses titles or activation process lineage. `ExternalTitleBarState` is independent of support capabilities; Unknown deliberately preserves application headings. Sway uses valid leaf `deco_rect`, layout and fullscreen ancestry; all other backends remain Unknown. Existing activation matching remains unchanged and separate.
+
+`requestSnapshotRefresh()` coalesces requests with backend event refreshes. Disconnections publish unavailable snapshots. Title detection has no periodic timer. Qt CSD composition belongs to the Qt provider.
+
+For compositor-only builds use `-DBUILD_AUDIO=OFF -DBUILD_STORAGE=OFF`. `-DBUILD_COMPOSITOR_WAYLAND=OFF` excludes generated Wayland protocol implementations while keeping the API and socket backends; unavailable explicit protocol backends report Unknown. Wayland implementations link directly to Qt Gui/WaylandClient and wayland-client, without a dependency on holonight-qt.

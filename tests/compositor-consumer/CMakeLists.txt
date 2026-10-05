@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.25)
+project(compositor_consumer LANGUAGES CXX)
+find_package(HoloNightSystemServices REQUIRED COMPONENTS Compositor)
+add_executable(compositor-consumer main.cpp)
+target_link_libraries(compositor-consumer PRIVATE HoloNightSystem::Compositor)

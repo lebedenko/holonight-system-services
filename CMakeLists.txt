@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(holonight-system-services VERSION 0.1.0 LANGUAGES CXX)
+project(holonight-system-services VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -7,10 +7,22 @@ set(CMAKE_AUTOMOC ON)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
-install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
+install(FILES LICENSE THIRD_PARTY_NOTICES.md LICENSES/HPND-sell-variant.txt LICENSES/GPL-3.0-or-later.txt
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 option(BUILD_TESTS "Build unit and package-consumer tests" OFF)
+
+find_package(Qt6 REQUIRED COMPONENTS Core)
+
+option(BUILD_COMPOSITOR "Build the Compositor component" ON)
+option(BUILD_COMPOSITOR_WAYLAND "Build compositor Wayland protocol implementations" ON)
+if(BUILD_COMPOSITOR)
+  find_package(Qt6 REQUIRED COMPONENTS Network)
+  if(BUILD_COMPOSITOR_WAYLAND)
+    find_package(Qt6 REQUIRED COMPONENTS Gui WaylandClient)
+  endif()
+  add_subdirectory(src/compositor)
+endif()
 
 option(BUILD_AUDIO "Build the Audio component" ON)
 option(BUILD_STORAGE "Build the Storage component" ON)
