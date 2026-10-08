@@ -18,7 +18,6 @@ class HyprlandBackend final : public CompositorBackend,
  public:
   explicit HyprlandBackend(HyprlandIpcTransportPtr transport = {}, QObject* parent = nullptr);
   void start() override;
-  void requestSnapshotRefresh() override { scheduleRefresh(); }
   [[nodiscard]] NumberedWorkspaceState numberedWorkspaces() const override { return numbered_; }
   void activateNumberedSlot(int slot) override;
   [[nodiscard]] QVariantList specialWorkspaces() const override { return special_workspaces_; }

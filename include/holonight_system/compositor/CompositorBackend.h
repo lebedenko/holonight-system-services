@@ -22,7 +22,6 @@ class CompositorBackend : public QObject {
     return WindowCommandResult::Unsupported;
   }
   virtual void start() = 0;
-  virtual void requestSnapshotRefresh() {}
   virtual void activateWorkspace(const QString& workspace_id) = 0;
   virtual WindowActivationResult requestWindowActivation(const WindowActivationRequest& request) {
     Q_UNUSED(request)

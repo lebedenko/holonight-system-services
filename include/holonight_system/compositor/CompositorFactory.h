@@ -9,5 +9,3 @@
 QString selectCompositorBackend(const QProcessEnvironment& environment);
 std::unique_ptr<CompositorBackend> createCompositorBackend(const QString& identifier);
 std::unique_ptr<CompositorBackend> createCompositorBackend();
-ExternalTitleBarState externalTitleBarForApplication(const CompositorSnapshot& snapshot, quint32 pid,
-                                                     const QString& app_id);

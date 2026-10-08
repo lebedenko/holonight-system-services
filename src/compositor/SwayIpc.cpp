@@ -29,39 +29,7 @@ std::optional<Integer> positiveInteger(const QJsonValue& value) {
   return static_cast<Integer>(number);
 }
 
-ExternalTitleBarState swayTitleBar(const QJsonObject& node, bool fullscreen, bool ancestry_valid,
-                                   const QString& parent_layout) {
-  if (fullscreen) {
-    return ExternalTitleBarState::Absent;
-  }
-  if (!ancestry_valid || node.value("layout").toString() != "none") {
-    return ExternalTitleBarState::Unknown;
-  }
-  // Only a leaf's own rectangle is evidence. A parent's combined tab title is not.
-  if (parent_layout != "splith" && parent_layout != "splitv" && parent_layout != "tabbed" &&
-      parent_layout != "stacked" && parent_layout != "none") {
-    return ExternalTitleBarState::Unknown;
-  }
-  const auto geometry = node.value(QStringLiteral("deco_rect"));
-  if (!geometry.isObject()) {
-    return ExternalTitleBarState::Unknown;
-  }
-  const auto rectangle = geometry.toObject();
-  for (const auto& key : {"x", "y", "width", "height"}) {
-    const auto value = rectangle.value(QLatin1String(key));
-    if (!value.isDouble() || !std::isfinite(value.toDouble()) || std::floor(value.toDouble()) != value.toDouble() ||
-        value.toDouble() < std::numeric_limits<int>::min() || value.toDouble() > std::numeric_limits<int>::max() ||
-        (value.toDouble() < 0 && (QByteArrayView(key) == "width" || QByteArrayView(key) == "height"))) {
-      return ExternalTitleBarState::Unknown;
-    }
-  }
-  return rectangle.value("width").toDouble() > 0 && rectangle.value("height").toDouble() > 0
-             ? ExternalTitleBarState::Present
-             : ExternalTitleBarState::Absent;
-}
-
-void observeSwayWindow(const QJsonObject& node, bool fullscreen, bool ancestry_valid, const QString& parent_layout,
-                       QList<CompositorWindow>* windows) {
+void observeSwayWindow(const QJsonObject& node, bool fullscreen, QList<CompositorWindow>* windows) {
   const bool native_leaf = node.value(QStringLiteral("nodes")).isArray() &&
                            node.value(QStringLiteral("floating_nodes")).isArray() &&
                            node.value(QStringLiteral("nodes")).toArray().isEmpty() &&
@@ -76,7 +44,6 @@ void observeSwayWindow(const QJsonObject& node, bool fullscreen, bool ancestry_v
             .app_id = node.value("app_id").toString(),
             .fullscreen = fullscreen,
             .pid = *pid,
-            .external_title_bar = swayTitleBar(node, fullscreen, ancestry_valid, parent_layout),
         });
       }
     }
@@ -100,16 +67,10 @@ void projectSwayWindow(const QJsonObject& node, const QString& output, const QSt
   }
 }
 
-bool validSwayLayout(const QJsonObject& node) {
-  const auto layout = node.value("layout").toString();
-  return layout == "none" || layout == "splith" || layout == "splitv" || layout == "tabbed" || layout == "stacked" ||
-         layout == "output";
-}
-
 void inspectSwayTree(const QJsonObject& node, const QString& output, const QString& workspace, bool project_snapshot,
                      QHash<QString, bool>* occupied, QHash<QString, CompositorActiveWindow>* active_windows,
                      QList<SwayWindowInfo>* activation_windows, QList<CompositorWindow>* windows,
-                     bool fullscreen = false, bool ancestry_valid = true, const QString& parent_layout = {}) {
+                     bool fullscreen = false) {
   const QString type = node.value(QStringLiteral("type")).toString();
   QString next_output = output;
   QString next_workspace = workspace;
@@ -130,9 +91,7 @@ void inspectSwayTree(const QJsonObject& node, const QString& output, const QStri
   // Workspace fullscreen_mode is always 1 for i3 IPC compatibility. Only container
   // nodes report actual per-window/fullscreen-subtree state.
   fullscreen = fullscreen || (type == QLatin1String("con") && valid_fullscreen && fullscreen_mode.toDouble() != 0);
-  ancestry_valid = ancestry_valid && valid_fullscreen && validSwayLayout(node) && node.value("nodes").isArray() &&
-                   node.value("floating_nodes").isArray();
-  observeSwayWindow(node, fullscreen, ancestry_valid, parent_layout, windows);
+  observeSwayWindow(node, fullscreen, windows);
   if (type == QLatin1String("con")) {
     const auto pid = positiveInteger<quint32>(node.value(QStringLiteral("pid")));
     const auto container_id = positiveInteger<quint64>(node.value(QStringLiteral("id")));
@@ -150,7 +109,7 @@ void inspectSwayTree(const QJsonObject& node, const QString& output, const QStri
     for (const auto value : node.value(child_list).toArray()) {
       if (value.isObject()) {
         inspectSwayTree(value.toObject(), next_output, next_workspace, project_snapshot, occupied, active_windows,
-                        activation_windows, windows, fullscreen, ancestry_valid, node.value("layout").toString());
+                        activation_windows, windows, fullscreen);
       }
     }
   }

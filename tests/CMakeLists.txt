@@ -38,7 +38,7 @@ if(BUILD_COMPOSITOR)
   target_compile_definitions(holonight_system_compositor PRIVATE HOLONIGHT_TESTS)
   add_executable(holonight_system_compositor_tests main.cpp test_hyprland_ipc.cpp
     test_hyprland_ipc_client.cpp test_hyprland_backend.cpp test_sway_ipc.cpp
-    test_sway_backend.cpp test_window_activation.cpp test_window_presentation.cpp)
+    test_sway_backend.cpp test_window_activation.cpp test_compositor_inventory.cpp)
   if(BUILD_COMPOSITOR_WAYLAND)
     target_sources(holonight_system_compositor_tests PRIVATE test_generic_workspace.cpp test_foreign_toplevel.cpp)
   endif()

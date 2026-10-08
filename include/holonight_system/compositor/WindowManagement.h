@@ -9,8 +9,6 @@ enum class WindowCommand { Activate, Minimize, Restore, Maximize, Unmaximize, Fu
 // NOLINTNEXTLINE(performance-enum-size): Preserve plugin ABI.
 enum class WindowCommandResult { Accepted, InvalidWindow, Unsupported, Disconnected, MissingSeat };
 
-enum class ExternalTitleBarState : quint8 { Unknown, Present, Absent };
-
 struct CompositorWindow {
   QString id;
   QString title;
@@ -22,6 +20,5 @@ struct CompositorWindow {
   bool fullscreen{false};
   QList<WindowCommand> operations;
   quint32 pid{0};
-  ExternalTitleBarState external_title_bar{ExternalTitleBarState::Unknown};
   bool operator==(const CompositorWindow&) const = default;
 };

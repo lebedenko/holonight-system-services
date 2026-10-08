@@ -239,43 +239,42 @@ TEST_F(SwayBackendTest, ReconnectsSelectedIntegrationAndClearsPublishedState) {
   ],"floating_nodes":[]})";
   finishRefresh(title_tree);
   ASSERT_TRUE(backend_->numberedWorkspaces().eligible);
-  EXPECT_EQ(externalTitleBarForApplication(qvariant_cast<CompositorSnapshot>(snapshots.last().first()), 42, "viewer"),
-            ExternalTitleBarState::Present);
+  EXPECT_EQ(qvariant_cast<CompositorSnapshot>(snapshots.last().first()).windows.size(), 1);
   subscription_->disconnectFromServer();
   ASSERT_TRUE(waitUntil([&] { return snapshots.count() > 1; }));
   EXPECT_FALSE(qvariant_cast<CompositorSnapshot>(snapshots.last().first()).connected);
   EXPECT_FALSE(backend_->numberedWorkspaces().eligible);
-  EXPECT_EQ(externalTitleBarForApplication(qvariant_cast<CompositorSnapshot>(snapshots.last().first()), 42, "viewer"),
-            ExternalTitleBarState::Unknown);
+  EXPECT_EQ(qvariant_cast<CompositorSnapshot>(snapshots.last().first()).windows.size(), 0);
   QTest::qWait(1100);
   acceptConnections();
   finishRefresh(title_tree);
   EXPECT_TRUE(qvariant_cast<CompositorSnapshot>(snapshots.last().first()).connected);
   EXPECT_TRUE(backend_->numberedWorkspaces().eligible);
-  EXPECT_EQ(externalTitleBarForApplication(qvariant_cast<CompositorSnapshot>(snapshots.last().first()), 42, "viewer"),
-            ExternalTitleBarState::Present);
+  EXPECT_EQ(qvariant_cast<CompositorSnapshot>(snapshots.last().first()).windows.size(), 1);
 }
 
-TEST_F(SwayBackendTest, RequestedRefreshCoalescesAndPublishesChangedDecorationGeometry) {
+TEST_F(SwayBackendTest, WindowEventsCoalesceAndPublishChangedTitles) {
   QSignalSpy snapshots(backend_.get(), &CompositorBackend::snapshotReady);
-  const QByteArray title_tree = R"({"type":"root","layout":"splith","fullscreen_mode":0,"nodes":[
-    {"type":"con","layout":"none","id":101,"pid":42,"app_id":"viewer","shell":"xdg_shell","fullscreen_mode":0,
-     "nodes":[],"floating_nodes":[],"deco_rect":{"x":0,"y":0,"width":640,"height":22}}
-  ],"floating_nodes":[]})";
-  finishRefresh(title_tree);
-  backend_->requestSnapshotRefresh();
-  backend_->requestSnapshotRefresh();
-  backend_->requestSnapshotRefresh();
-  auto borderless_tree = title_tree;
-  borderless_tree.replace("640", "0");
-  borderless_tree.replace("22", "0");
-  finishRefresh(borderless_tree);
-  ASSERT_EQ(snapshots.count(), 2);
-  EXPECT_EQ(externalTitleBarForApplication(qvariant_cast<CompositorSnapshot>(snapshots.last().first()), 42, "viewer"),
-            ExternalTitleBarState::Absent);
+  const QByteArray tree = R"({"type":"root","nodes":[
+    {"type":"con","id":101,"pid":42,"app_id":"viewer","shell":"xdg_shell","name":"before",
+     "nodes":[],"floating_nodes":[]}
+  ]})";
+  finishRefresh(tree);
+  for (int i = 0; i < 3; ++i) {
+    writeFrame(subscription_, (1U << 31U) | 3U, "{}");
+  }
+  auto updated = tree;
+  updated.replace("before", "after");
+  finishRefresh(updated);
+  ASSERT_TRUE(waitUntil([&] { return snapshots.count() >= 2; }));
+  // An event received during the refresh can queue one follow-up refresh.
+  if (waitUntil([&] { return request_->bytesAvailable() > 0; })) {
+    finishRefresh(updated);
+  }
+  EXPECT_LE(snapshots.count(), 3);
+  const auto snapshot = qvariant_cast<CompositorSnapshot>(snapshots.last().first());
+  ASSERT_EQ(snapshot.windows.size(), 1);
+  EXPECT_EQ(snapshot.windows.first().title, "after");
+  EXPECT_EQ(snapshot.windows.first().pid, 42U);
   EXPECT_EQ(request_->bytesAvailable(), 0);
-  writeFrame(subscription_, (1U << 31U), "{}");
-  finishRefresh(title_tree);
-  EXPECT_EQ(externalTitleBarForApplication(qvariant_cast<CompositorSnapshot>(snapshots.last().first()), 42, "viewer"),
-            ExternalTitleBarState::Present);
 }

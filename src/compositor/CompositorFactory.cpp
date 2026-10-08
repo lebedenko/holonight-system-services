@@ -58,20 +58,3 @@ std::unique_ptr<CompositorBackend> createCompositorBackend(const QString& identi
 std::unique_ptr<CompositorBackend> createCompositorBackend() {
   return createCompositorBackend(selectCompositorBackend(QProcessEnvironment::systemEnvironment()));
 }
-ExternalTitleBarState externalTitleBarForApplication(const CompositorSnapshot& snapshot, quint32 pid,
-                                                     const QString& app_id) {
-  if (!snapshot.connected || pid == 0 || app_id.isEmpty()) {
-    return ExternalTitleBarState::Unknown;
-  }
-  const CompositorWindow* match = nullptr;
-  for (const auto& window : snapshot.windows) {
-    if (window.pid != pid || window.app_id != app_id) {
-      continue;
-    }
-    if (match != nullptr) {
-      return ExternalTitleBarState::Unknown;
-    }
-    match = &window;
-  }
-  return (match != nullptr) ? match->external_title_bar : ExternalTitleBarState::Unknown;
-}

@@ -100,8 +100,8 @@ Publication, releases and artifact uploads remain remote operations.
 
 Include `<holonight_system/compositor/CompositorFactory.h>` and link `HoloNightSystem::Compositor`. `createCompositorBackend()` selects the backend using desktop tokens before session markers; conflicting evidence uses generic Wayland. Explicit backend selection is available for shell plugins. Concrete backends, transports and protocol bindings remain private. No running shell or daemon is required.
 
-Snapshot window identifiers are opaque. `externalTitleBarForApplication(snapshot, pid, app_id)` accepts only one exact native PID/app ID match. It never uses titles or activation process lineage. `ExternalTitleBarState` is independent of support capabilities; Unknown deliberately preserves application headings. Sway uses valid leaf `deco_rect`, layout and fullscreen ancestry; all other backends remain Unknown. Existing activation matching remains unchanged and separate.
+Snapshot window identifiers are opaque. Window inventory retains native PID/app identity, titles and fullscreen state. Activation matching remains independent of application presentation. Applications control their own content headings.
 
-`requestSnapshotRefresh()` coalesces requests with backend event refreshes. Disconnections publish unavailable snapshots. Title detection has no periodic timer. Qt CSD composition belongs to the Qt provider.
+Backend events and reconnects refresh snapshots, with concurrent refreshes coalesced. Disconnections publish unavailable snapshots.
 
-For compositor-only builds use `-DBUILD_AUDIO=OFF -DBUILD_STORAGE=OFF`. `-DBUILD_COMPOSITOR_WAYLAND=OFF` excludes generated Wayland protocol implementations while keeping the API and socket backends; unavailable explicit protocol backends report Unknown. Wayland implementations link directly to Qt Gui/WaylandClient and wayland-client, without a dependency on holonight-qt.
+For compositor-only builds use `-DBUILD_AUDIO=OFF -DBUILD_STORAGE=OFF`. `-DBUILD_COMPOSITOR_WAYLAND=OFF` excludes generated Wayland protocol implementations while keeping the API and socket backends; unavailable explicit protocol backends report disconnected snapshots. Wayland implementations link directly to Qt Gui/WaylandClient and wayland-client, without a dependency on holonight-qt.
