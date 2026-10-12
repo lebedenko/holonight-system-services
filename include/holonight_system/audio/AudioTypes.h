@@ -45,4 +45,4 @@ struct AudioStream {
   AudioStreamType type{AudioStreamType::SinkInput};
 };
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

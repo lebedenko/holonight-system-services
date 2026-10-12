@@ -6,20 +6,19 @@
 
 namespace HoloNight::System {
 
-AudioController::AudioController(QObject *parent)
-    : AudioController(std::make_unique<PulseAudioBackend>(), parent) {}
+AudioController::AudioController(QObject* parent) : AudioController(std::make_unique<PulseAudioBackend>(), parent) {}
 
-AudioController::AudioController(std::unique_ptr<AudioBackend> backend,
-                                 QObject *parent)
-    : QObject(parent), outputs_(new AudioDeviceModel(this)),
+AudioController::AudioController(std::unique_ptr<AudioBackend> backend, QObject* parent)
+    : QObject(parent),
+      outputs_(new AudioDeviceModel(this)),
       inputs_(new AudioDeviceModel(this)),
       playback_streams_(new AudioStreamModel(this)),
       recording_streams_(new AudioStreamModel(this)),
       backend_(std::move(backend)) {}
 
-AudioController::AudioController([[maybe_unused]] SkipInitTag tag,
-                                 QObject *parent)
-    : QObject(parent), outputs_(new AudioDeviceModel(this)),
+AudioController::AudioController([[maybe_unused]] SkipInitTag tag, QObject* parent)
+    : QObject(parent),
+      outputs_(new AudioDeviceModel(this)),
       inputs_(new AudioDeviceModel(this)),
       playback_streams_(new AudioStreamModel(this)),
       recording_streams_(new AudioStreamModel(this)) {}
@@ -41,26 +40,16 @@ void AudioController::start() {
     return;
   }
 
-  connect(backend_.get(), &AudioBackend::availableChanged, this,
-          &AudioController::setAvailable);
-  connect(backend_.get(), &AudioBackend::healthStateChanged, this,
-          &AudioController::setHealthState);
-  connect(backend_.get(), &AudioBackend::deviceAdded, this,
-          &AudioController::onDeviceAdded);
-  connect(backend_.get(), &AudioBackend::deviceChanged, this,
-          &AudioController::onDeviceChanged);
-  connect(backend_.get(), &AudioBackend::sinkRemoved, this,
-          &AudioController::onSinkRemoved);
-  connect(backend_.get(), &AudioBackend::sourceRemoved, this,
-          &AudioController::onSourceRemoved);
-  connect(backend_.get(), &AudioBackend::streamAdded, this,
-          &AudioController::onStreamAdded);
-  connect(backend_.get(), &AudioBackend::streamRemoved, this,
-          &AudioController::onStreamRemoved);
-  connect(backend_.get(), &AudioBackend::streamChanged, this,
-          &AudioController::onStreamChanged);
-  connect(backend_.get(), &AudioBackend::inputLevelChanged, this,
-          &AudioController::applyInputLevel);
+  connect(backend_.get(), &AudioBackend::availableChanged, this, &AudioController::setAvailable);
+  connect(backend_.get(), &AudioBackend::healthStateChanged, this, &AudioController::setHealthState);
+  connect(backend_.get(), &AudioBackend::deviceAdded, this, &AudioController::onDeviceAdded);
+  connect(backend_.get(), &AudioBackend::deviceChanged, this, &AudioController::onDeviceChanged);
+  connect(backend_.get(), &AudioBackend::sinkRemoved, this, &AudioController::onSinkRemoved);
+  connect(backend_.get(), &AudioBackend::sourceRemoved, this, &AudioController::onSourceRemoved);
+  connect(backend_.get(), &AudioBackend::streamAdded, this, &AudioController::onStreamAdded);
+  connect(backend_.get(), &AudioBackend::streamRemoved, this, &AudioController::onStreamRemoved);
+  connect(backend_.get(), &AudioBackend::streamChanged, this, &AudioController::onStreamChanged);
+  connect(backend_.get(), &AudioBackend::inputLevelChanged, this, &AudioController::applyInputLevel);
 
   backend_->start();
 }
@@ -84,13 +73,13 @@ void AudioController::setDefaultInput(uint32_t idx) {
   }
 }
 
-void AudioController::setDefaultOutputByName(const QString &name) {
+void AudioController::setDefaultOutputByName(const QString& name) {
   if (backend_ != nullptr) {
     backend_->setDefaultOutputByName(name);
   }
 }
 
-void AudioController::setDefaultInputByName(const QString &name) {
+void AudioController::setDefaultInputByName(const QString& name) {
   if (backend_ != nullptr) {
     backend_->setDefaultInputByName(name);
   }
@@ -139,15 +128,13 @@ void AudioController::setStreamMuted(uint32_t idx, bool muted) {
   }
 }
 
-void AudioController::moveStreamToOutput(uint32_t stream_idx,
-                                         uint32_t sink_idx) {
+void AudioController::moveStreamToOutput(uint32_t stream_idx, uint32_t sink_idx) {
   if (backend_ != nullptr) {
     backend_->moveStreamToDevice(stream_idx, sink_idx);
   }
 }
 
-void AudioController::moveStreamToInput(uint32_t stream_idx,
-                                        uint32_t source_idx) {
+void AudioController::moveStreamToInput(uint32_t stream_idx, uint32_t source_idx) {
   if (backend_ != nullptr) {
     backend_->moveStreamToDevice(stream_idx, source_idx);
   }
@@ -202,18 +189,16 @@ void AudioController::setAvailable(bool value) {
   emit availableChanged();
 }
 
-void AudioController::onDeviceAdded(const AudioDevice &device) {
-  AudioDeviceModel *model =
-      (device.type == AudioDeviceType::Sink) ? outputs_ : inputs_;
+void AudioController::onDeviceAdded(const AudioDevice& device) {
+  AudioDeviceModel* model = (device.type == AudioDeviceType::Sink) ? outputs_ : inputs_;
   model->applyAdd(device);
   if (device.is_default) {
     applyDefaultDeviceState(device);
   }
 }
 
-void AudioController::onDeviceChanged(const AudioDevice &device) {
-  AudioDeviceModel *model =
-      (device.type == AudioDeviceType::Sink) ? outputs_ : inputs_;
+void AudioController::onDeviceChanged(const AudioDevice& device) {
+  AudioDeviceModel* model = (device.type == AudioDeviceType::Sink) ? outputs_ : inputs_;
   model->applyChange(device);
   if (device.is_default) {
     applyDefaultDeviceState(device);
@@ -228,21 +213,15 @@ void AudioController::onSinkRemoved(uint32_t idx) {
   }
 }
 
-void AudioController::onSourceRemoved(uint32_t idx) {
-  inputs_->applyRemove(idx);
-}
+void AudioController::onSourceRemoved(uint32_t idx) { inputs_->applyRemove(idx); }
 
-void AudioController::onStreamAdded(const AudioStream &stream) {
-  AudioStreamModel *model = (stream.type == AudioStreamType::SinkInput)
-                                ? playback_streams_
-                                : recording_streams_;
+void AudioController::onStreamAdded(const AudioStream& stream) {
+  AudioStreamModel* model = (stream.type == AudioStreamType::SinkInput) ? playback_streams_ : recording_streams_;
   model->applyAdd(stream);
 }
 
-void AudioController::onStreamChanged(const AudioStream &stream) {
-  AudioStreamModel *model = (stream.type == AudioStreamType::SinkInput)
-                                ? playback_streams_
-                                : recording_streams_;
+void AudioController::onStreamChanged(const AudioStream& stream) {
+  AudioStreamModel* model = (stream.type == AudioStreamType::SinkInput) ? playback_streams_ : recording_streams_;
   model->applyChange(stream);
 }
 
@@ -259,7 +238,7 @@ void AudioController::setHealthState(AudioHealthState value) {
   emit healthStateChanged();
 }
 
-void AudioController::applyDefaultDeviceState(const AudioDevice &device) {
+void AudioController::applyDefaultDeviceState(const AudioDevice& device) {
   if (device.type == AudioDeviceType::Sink) {
     if (default_output_id_ != device.id) {
       default_output_id_ = device.id;
@@ -270,4 +249,4 @@ void AudioController::applyDefaultDeviceState(const AudioDevice &device) {
   }
 }
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

@@ -1,47 +1,47 @@
 #include "StorageDriveModel.h"
 
 namespace HoloNight::System {
-int StorageDriveModel::rowCount(const QModelIndex &parent) const {
+int StorageDriveModel::rowCount(const QModelIndex& parent) const {
   return parent.isValid() ? 0 : static_cast<int>(items_.size());
 }
-QVariant StorageDriveModel::data(const QModelIndex &index, int role) const {
-  if (!index.isValid() || index.model() != this || index.column() != 0 ||
-      index.row() < 0 || index.row() >= items_.size())
+QVariant StorageDriveModel::data(const QModelIndex& index, int role) const {
+  if (!index.isValid() || index.model() != this || index.column() != 0 || index.row() < 0 ||
+      index.row() >= items_.size())
     return {};
-  const auto &item = items_.at(index.row());
+  const auto& item = items_.at(index.row());
   switch (role) {
-  case IdRole:
-    return QVariant::fromValue(item.id);
-  case VendorRole:
-    return QVariant::fromValue(item.vendor);
-  case ModelRole:
-    return QVariant::fromValue(item.model);
-  case SerialRole:
-    return QVariant::fromValue(item.serial);
-  case ConnectionBusRole:
-    return QVariant::fromValue(item.connectionBus);
-  case SiblingIdRole:
-    return QVariant::fromValue(item.siblingId);
-  case RemovableRole:
-    return QVariant::fromValue(item.removable);
-  case MediaRemovableRole:
-    return QVariant::fromValue(item.mediaRemovable);
-  case MediaPresentRole:
-    return QVariant::fromValue(item.mediaPresent);
-  case OpticalRole:
-    return QVariant::fromValue(item.optical);
-  case CanEjectRole:
-    return QVariant::fromValue(item.canEject);
-  case CanPowerOffRole:
-    return QVariant::fromValue(item.canPowerOff);
-  case MediaRole:
-    return QVariant::fromValue(item.media);
-  case MediaCompatibilityRole:
-    return QVariant::fromValue(item.mediaCompatibility);
-  case RotationRateRole:
-    return item.rotationRate ? QVariant(*item.rotationRate) : QVariant{};
-  default:
-    return {};
+    case IdRole:
+      return QVariant::fromValue(item.id);
+    case VendorRole:
+      return QVariant::fromValue(item.vendor);
+    case ModelRole:
+      return QVariant::fromValue(item.model);
+    case SerialRole:
+      return QVariant::fromValue(item.serial);
+    case ConnectionBusRole:
+      return QVariant::fromValue(item.connectionBus);
+    case SiblingIdRole:
+      return QVariant::fromValue(item.siblingId);
+    case RemovableRole:
+      return QVariant::fromValue(item.removable);
+    case MediaRemovableRole:
+      return QVariant::fromValue(item.mediaRemovable);
+    case MediaPresentRole:
+      return QVariant::fromValue(item.mediaPresent);
+    case OpticalRole:
+      return QVariant::fromValue(item.optical);
+    case CanEjectRole:
+      return QVariant::fromValue(item.canEject);
+    case CanPowerOffRole:
+      return QVariant::fromValue(item.canPowerOff);
+    case MediaRole:
+      return QVariant::fromValue(item.media);
+    case MediaCompatibilityRole:
+      return QVariant::fromValue(item.mediaCompatibility);
+    case RotationRateRole:
+      return item.rotationRate ? QVariant(*item.rotationRate) : QVariant{};
+    default:
+      return {};
   }
 }
 QHash<int, QByteArray> StorageDriveModel::roleNames() const {
@@ -61,17 +61,16 @@ QHash<int, QByteArray> StorageDriveModel::roleNames() const {
           {MediaCompatibilityRole, "mediaCompatibility"},
           {RotationRateRole, "rotationRate"}};
 }
-std::optional<StorageDrive> StorageDriveModel::find(const QString &id) const {
-  for (const auto &item : items_)
-    if (item.id == id)
-      return item;
+std::optional<StorageDrive> StorageDriveModel::find(const QString& id) const {
+  for (const auto& item : items_)
+    if (item.id == id) return item;
   return std::nullopt;
 }
-void StorageDriveModel::apply(const QList<StorageDrive> &items) {
+void StorageDriveModel::apply(const QList<StorageDrive>& items) {
   // Preserve rows and persistent indexes for unchanged identities.
   for (int i = static_cast<int>(items_.size()) - 1; i >= 0; --i) {
     bool present = false;
-    for (const auto &item : items)
+    for (const auto& item : items)
       if (item.id == items_[i].id) {
         present = true;
         break;
@@ -82,10 +81,9 @@ void StorageDriveModel::apply(const QList<StorageDrive> &items) {
       endRemoveRows();
     }
   }
-  for (const auto &item : items) {
+  for (const auto& item : items) {
     int row = 0;
-    while (row < items_.size() && items_[row].id != item.id)
-      ++row;
+    while (row < items_.size() && items_[row].id != item.id) ++row;
     if (row == items_.size()) {
       beginInsertRows({}, row, row);
       items_.append(item);
@@ -96,4 +94,4 @@ void StorageDriveModel::apply(const QList<StorageDrive> &items) {
     }
   }
 }
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

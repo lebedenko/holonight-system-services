@@ -2,39 +2,37 @@
 
 namespace HoloNight::System {
 
-AudioStreamModel::AudioStreamModel(QObject *parent)
-    : QAbstractListModel(parent) {}
+AudioStreamModel::AudioStreamModel(QObject* parent) : QAbstractListModel(parent) {}
 
-int AudioStreamModel::rowCount(const QModelIndex &parent) const {
+int AudioStreamModel::rowCount(const QModelIndex& parent) const {
   if (parent.isValid()) {
     return 0;
   }
   return static_cast<int>(streams_.size());
 }
 
-QVariant AudioStreamModel::data(const QModelIndex &index, int role) const {
-  if (!index.isValid() || index.row() < 0 ||
-      index.row() >= static_cast<int>(streams_.size())) {
+QVariant AudioStreamModel::data(const QModelIndex& index, int role) const {
+  if (!index.isValid() || index.row() < 0 || index.row() >= static_cast<int>(streams_.size())) {
     return {};
   }
-  const AudioStream &stream = streams_.at(index.row());
+  const AudioStream& stream = streams_.at(index.row());
   switch (static_cast<Role>(role)) {
-  case Role::StreamId:
-    return stream.id;
-  case Role::Name:
-    return stream.name;
-  case Role::Application:
-    return stream.application;
-  case Role::IconName:
-    return stream.icon_name;
-  case Role::Volume:
-    return stream.volume;
-  case Role::Muted:
-    return stream.muted;
-  case Role::CurrentDevice:
-    return stream.device;
-  default:
-    return {};
+    case Role::StreamId:
+      return stream.id;
+    case Role::Name:
+      return stream.name;
+    case Role::Application:
+      return stream.application;
+    case Role::IconName:
+      return stream.icon_name;
+    case Role::Volume:
+      return stream.volume;
+    case Role::Muted:
+      return stream.muted;
+    case Role::CurrentDevice:
+      return stream.device;
+    default:
+      return {};
   }
 }
 
@@ -51,7 +49,7 @@ QHash<int, QByteArray> AudioStreamModel::roleNames() const {
   return kRoles;
 }
 
-void AudioStreamModel::applyAdd(const AudioStream &stream) {
+void AudioStreamModel::applyAdd(const AudioStream& stream) {
   for (int row = 0; row < static_cast<int>(streams_.size()); ++row) {
     if (streams_.at(row).id == stream.id) {
       streams_.replace(row, stream);
@@ -67,7 +65,7 @@ void AudioStreamModel::applyAdd(const AudioStream &stream) {
   endInsertRows();
 }
 
-void AudioStreamModel::applyChange(const AudioStream &stream) {
+void AudioStreamModel::applyChange(const AudioStream& stream) {
   for (int row = 0; row < static_cast<int>(streams_.size()); ++row) {
     if (streams_.at(row).id == stream.id) {
       streams_.replace(row, stream);
@@ -96,4 +94,4 @@ void AudioStreamModel::clear() {
   endResetModel();
 }
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

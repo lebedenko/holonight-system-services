@@ -13,10 +13,9 @@ namespace HoloNight::System {
 
 class AudioDeviceModel : public QAbstractListModel {
   Q_OBJECT
-  Q_PROPERTY(
-      QVariantMap defaultDevice READ defaultDevice NOTIFY defaultDeviceChanged)
+  Q_PROPERTY(QVariantMap defaultDevice READ defaultDevice NOTIFY defaultDeviceChanged)
 
-public:
+ public:
   enum class Role : uint16_t {
     DeviceId = Qt::UserRole + 1,
     Name,
@@ -38,29 +37,27 @@ public:
     IconName,
   };
 
-  explicit AudioDeviceModel(QObject *parent = nullptr);
+  explicit AudioDeviceModel(QObject* parent = nullptr);
 
-  [[nodiscard]] int
-  rowCount(const QModelIndex &parent = QModelIndex()) const override;
-  [[nodiscard]] QVariant data(const QModelIndex &index,
-                              int role = Qt::DisplayRole) const override;
+  [[nodiscard]] int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+  [[nodiscard]] QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
   [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
   [[nodiscard]] QVariantMap defaultDevice() const { return default_device_; }
 
-  void applyAdd(const AudioDevice &device);
-  void applyChange(const AudioDevice &device);
+  void applyAdd(const AudioDevice& device);
+  void applyChange(const AudioDevice& device);
   void applyRemove(uint32_t device_id);
   void clear();
 
-signals:
+ signals:
   void defaultDeviceChanged();
 
-private:
+ private:
   void refreshDefaultDevice();
 
   QList<AudioDevice> devices_;
   QVariantMap default_device_;
 };
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

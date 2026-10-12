@@ -8,8 +8,7 @@ using namespace HoloNight::System;
 
 namespace {
 
-AudioStream makeStream(uint32_t stream_id, const char *name,
-                       AudioStreamType type = AudioStreamType::SinkInput,
+AudioStream makeStream(uint32_t stream_id, const char* name, AudioStreamType type = AudioStreamType::SinkInput,
                        uint32_t device = 0, uint8_t volume = 60) {
   AudioStream stream;
   stream.id = stream_id;
@@ -22,7 +21,7 @@ AudioStream makeStream(uint32_t stream_id, const char *name,
   return stream;
 }
 
-} // namespace
+}  // namespace
 
 TEST(AudioStreamModel, RowCountIsZeroInitially) {
   AudioStreamModel model;
@@ -51,43 +50,26 @@ TEST(AudioStreamModel, ApplyAddUpdatesExistingRowByStreamId) {
   EXPECT_EQ(rows_inserted.count(), 0);
   EXPECT_EQ(data_changed.count(), 1);
   const QModelIndex item = model.index(0);
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Volume))
-                .toUInt(),
-            75U);
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Volume)).toUInt(), 75U);
 }
 
 TEST(AudioStreamModel, DataReturnsAllRoles) {
   AudioStreamModel model;
-  AudioStream stream =
-      makeStream(7, "video", AudioStreamType::SourceOutput, 3, 88);
+  AudioStream stream = makeStream(7, "video", AudioStreamType::SourceOutput, 3, 88);
   stream.application = QStringLiteral("Firefox");
   stream.icon_name = QStringLiteral("firefox");
   stream.muted = true;
   model.applyAdd(stream);
 
   const QModelIndex item = model.index(0);
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::StreamId))
-                .toUInt(),
-            7U);
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Name))
-                .toString(),
-            QStringLiteral("video"));
-  EXPECT_EQ(
-      model.data(item, static_cast<int>(AudioStreamModel::Role::Application))
-          .toString(),
-      QStringLiteral("Firefox"));
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::IconName))
-                .toString(),
-            QStringLiteral("firefox"));
-  EXPECT_EQ(
-      model.data(item, static_cast<int>(AudioStreamModel::Role::CurrentDevice))
-          .toUInt(),
-      3U);
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Volume))
-                .toUInt(),
-            88U);
-  EXPECT_TRUE(model.data(item, static_cast<int>(AudioStreamModel::Role::Muted))
-                  .toBool());
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::StreamId)).toUInt(), 7U);
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Name)).toString(), QStringLiteral("video"));
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Application)).toString(),
+            QStringLiteral("Firefox"));
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::IconName)).toString(), QStringLiteral("firefox"));
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::CurrentDevice)).toUInt(), 3U);
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Volume)).toUInt(), 88U);
+  EXPECT_TRUE(model.data(item, static_cast<int>(AudioStreamModel::Role::Muted)).toBool());
 }
 
 TEST(AudioStreamModel, InvalidIndexReturnsNullVariant) {
@@ -106,9 +88,7 @@ TEST(AudioStreamModel, ApplyChangeUpdatesExistingRow) {
   EXPECT_EQ(model.rowCount(), 1);
   EXPECT_EQ(data_changed.count(), 1);
   const QModelIndex item = model.index(0);
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Volume))
-                .toUInt(),
-            90U);
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::Volume)).toUInt(), 90U);
 }
 
 TEST(AudioStreamModel, ApplyChangeUpsertIfNotFound) {
@@ -132,9 +112,7 @@ TEST(AudioStreamModel, ApplyRemoveByStreamId) {
   EXPECT_EQ(model.rowCount(), 1);
   EXPECT_EQ(rows_removed.count(), 1);
   const QModelIndex item = model.index(0);
-  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::StreamId))
-                .toUInt(),
-            2U);
+  EXPECT_EQ(model.data(item, static_cast<int>(AudioStreamModel::Role::StreamId)).toUInt(), 2U);
 }
 
 TEST(AudioStreamModel, ApplyRemoveIgnoresMissingId) {
@@ -161,16 +139,8 @@ TEST(AudioStreamModel, ApplyRemoveMiddleElementPreservesOrderOfRemaining) {
   model.applyRemove(2);
 
   ASSERT_EQ(model.rowCount(), 2);
-  EXPECT_EQ(model
-                .data(model.index(0),
-                      static_cast<int>(AudioStreamModel::Role::StreamId))
-                .toUInt(),
-            1U);
-  EXPECT_EQ(model
-                .data(model.index(1),
-                      static_cast<int>(AudioStreamModel::Role::StreamId))
-                .toUInt(),
-            3U);
+  EXPECT_EQ(model.data(model.index(0), static_cast<int>(AudioStreamModel::Role::StreamId)).toUInt(), 1U);
+  EXPECT_EQ(model.data(model.index(1), static_cast<int>(AudioStreamModel::Role::StreamId)).toUInt(), 3U);
 }
 
 TEST(AudioStreamModel, ClearEmitsModelReset) {
@@ -189,19 +159,11 @@ TEST(AudioStreamModel, RoleNamesAreCorrect) {
   AudioStreamModel model;
   const QHash<int, QByteArray> roles = model.roleNames();
 
-  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::StreamId)),
-            "streamId");
-  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Name)),
-            "name");
-  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Application)),
-            "application");
-  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::IconName)),
-            "iconName");
-  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Volume)),
-            "volume");
-  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Muted)),
-            "muted");
-  EXPECT_EQ(
-      roles.value(static_cast<int>(AudioStreamModel::Role::CurrentDevice)),
-      "currentDevice");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::StreamId)), "streamId");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Name)), "name");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Application)), "application");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::IconName)), "iconName");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Volume)), "volume");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Muted)), "muted");
+  EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::CurrentDevice)), "currentDevice");
 }

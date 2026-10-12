@@ -18,22 +18,21 @@ class PulseAudioSystem;
 // Free function (external linkage) so test_pulse_audio_backend.cpp can exercise
 // it directly against hand-built pa_proplist fixtures without going through a
 // live PulseAudio connection.
-QString classifyBusType(const pa_proplist *proplist, const QString &device_name,
-                        const QString &active_port_name);
+QString classifyBusType(const pa_proplist* proplist, const QString& device_name, const QString& active_port_name);
 
 class PulseAudioBackend : public AudioBackend {
   Q_OBJECT
 
-public:
-  explicit PulseAudioBackend(QObject *parent = nullptr);
+ public:
+  explicit PulseAudioBackend(QObject* parent = nullptr);
   ~PulseAudioBackend() override;
 
-  PulseAudioBackend(const PulseAudioBackend &) = delete;
-  PulseAudioBackend &operator=(const PulseAudioBackend &) = delete;
-  PulseAudioBackend(PulseAudioBackend &&) = delete;
-  PulseAudioBackend &operator=(PulseAudioBackend &&) = delete;
+  PulseAudioBackend(const PulseAudioBackend&) = delete;
+  PulseAudioBackend& operator=(const PulseAudioBackend&) = delete;
+  PulseAudioBackend(PulseAudioBackend&&) = delete;
+  PulseAudioBackend& operator=(PulseAudioBackend&&) = delete;
 
-  static void setPulseAudioSystem(PulseAudioSystem *sys);
+  static void setPulseAudioSystem(PulseAudioSystem* sys);
   static void resetPulseAudioSystem();
 
   // Test seam only — overrides the production backoff schedule (default:
@@ -54,30 +53,30 @@ public:
   void setSourceMuted(uint32_t idx, bool muted) override;
   void setDefaultOutput(uint32_t idx) override;
   void setDefaultInput(uint32_t idx) override;
-  void setDefaultOutputByName(const QString &name) override;
-  void setDefaultInputByName(const QString &name) override;
+  void setDefaultOutputByName(const QString& name) override;
+  void setDefaultInputByName(const QString& name) override;
   void setStreamVolume(uint32_t idx, int percent) override;
   void setStreamMuted(uint32_t idx, bool muted) override;
   void moveStreamToDevice(uint32_t stream_idx, uint32_t device_idx) override;
 
-private Q_SLOTS:
+ private Q_SLOTS:
   void onContextLost();
   void onReconnectSucceeded();
   void attemptReconnect();
   void retryInputLevelMonitor();
 
-private:
+ private:
   void scheduleReconnect();
   void setHealthState(AudioHealthState state);
 
   static constexpr int kMaxReconnectAttempts = 8;
 
   int reconnect_attempt_{0};
-  QTimer *reconnect_timer_{nullptr};
+  QTimer* reconnect_timer_{nullptr};
   AudioHealthState health_state_{AudioHealthState::Connected};
 
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

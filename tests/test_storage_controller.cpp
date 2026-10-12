@@ -1,20 +1,21 @@
 #include "StorageController.h"
+
 #include <QAbstractItemModelTester>
 #include <QCoreApplication>
 #include <QSignalSpy>
+
 #include <gtest/gtest.h>
 
 using namespace HoloNight::System;
 namespace {
 class Backend : public StorageBackend {
-public:
+ public:
   QList<StorageResult> calls;
   QList<StorageDrive> drives;
   QList<StorageVolume> volumes;
   void start() override {}
   void stop() override {}
-  void execute(const QString &id, StorageOperation op,
-               const QString &target) override {
+  void execute(const QString& id, StorageOperation op, const QString& target) override {
     calls.append({id, target, op, {}, {}, {}});
   }
   void publish() { emit snapshotChanged(drives, volumes, true); }
@@ -23,7 +24,7 @@ public:
     result.errorName = failure;
     result.mountPath = path;
     if (failure.isEmpty() && result.operation == StorageOperation::Unmount)
-      for (auto &v : volumes)
+      for (auto& v : volumes)
         if (v.id == result.targetId) {
           v.mountPoints.clear();
           v.canUnmount = false;
@@ -49,17 +50,13 @@ StorageVolume volume(QString id, QString driveId, bool mounted = true) {
   v.driveId = driveId;
   v.canMount = !mounted;
   v.canUnmount = mounted;
-  if (mounted)
-    v.mountPoints = {QStringLiteral("/mnt/") + id};
+  if (mounted) v.mountPoints = {QStringLiteral("/mnt/") + id};
   return v;
 }
 void dispatch() { QCoreApplication::processEvents(); }
-StorageResult result(const QSignalSpy &spy, int index = 0) {
-  return qvariant_cast<StorageResult>(spy.at(index).at(0));
-}
-} // namespace
-TEST(StorageController,
-     MountReturnsCorrelatedPathAndDoesNotOptimisticallyChangeState) {
+StorageResult result(const QSignalSpy& spy, int index = 0) { return qvariant_cast<StorageResult>(spy.at(index).at(0)); }
+}  // namespace
+TEST(StorageController, MountReturnsCorrelatedPathAndDoesNotOptimisticallyChangeState) {
   Backend b;
   StorageController c(&b);
   b.volumes = {volume("v", {}, false)};
@@ -97,8 +94,7 @@ TEST(StorageController, RemovalUnmountsHiddenVolumesAndStopsAtFirstFailure) {
   EXPECT_FALSE(result(spy).succeeded());
   EXPECT_EQ(b.calls.size(), 2);
 }
-TEST(StorageController,
-     PowerOffRequiresExactSiblingScopeAndUnmountsAllBeforePowerOff) {
+TEST(StorageController, PowerOffRequiresExactSiblingScopeAndUnmountsAllBeforePowerOff) {
   Backend b;
   StorageController c(&b);
   b.drives = {drive("a", "usb"), drive("b", "usb")};
@@ -177,23 +173,20 @@ TEST(StorageController, AuthorizationCancellationIsReturnedWithoutRetry) {
   dispatch();
   b.complete("org.freedesktop.UDisks2.Error.NotAuthorizedDismissed");
   ASSERT_EQ(spy.size(), 1);
-  EXPECT_EQ(result(spy).errorName,
-            "org.freedesktop.UDisks2.Error.NotAuthorizedDismissed");
+  EXPECT_EQ(result(spy).errorName, "org.freedesktop.UDisks2.Error.NotAuthorizedDismissed");
   dispatch();
   EXPECT_EQ(b.calls.size(), 1);
 }
 TEST(StorageModels, UpdatePreservesIdentityAndRemovalInvalidatesIndex) {
   StorageVolumeModel model;
-  QAbstractItemModelTester tester(
-      &model, QAbstractItemModelTester::FailureReportingMode::Fatal);
+  QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::Fatal);
   auto v = volume("opaque", {}, false);
   model.apply({v});
   QPersistentModelIndex index(model.index(0));
   v.label = "Renamed";
   model.apply({v});
   EXPECT_TRUE(index.isValid());
-  EXPECT_EQ(model.data(index, StorageVolumeModel::LabelRole).toString(),
-            "Renamed");
+  EXPECT_EQ(model.data(index, StorageVolumeModel::LabelRole).toString(), "Renamed");
   model.apply({});
   EXPECT_FALSE(index.isValid());
   EXPECT_FALSE(model.find("opaque"));
@@ -232,17 +225,14 @@ TEST(StorageController, MissingTargetsAndChangedCapabilitiesNeverReachBackend) {
 }
 TEST(StorageModels, DriveModelRetainsEmptyReadersAndAllRawFacts) {
   StorageDriveModel model;
-  QAbstractItemModelTester tester(
-      &model, QAbstractItemModelTester::FailureReportingMode::Fatal);
+  QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::Fatal);
   auto reader = drive("reader");
   reader.mediaPresent = false;
   model.apply({reader});
   EXPECT_EQ(model.rowCount(), 1);
-  EXPECT_FALSE(
-      model.data(model.index(0), StorageDriveModel::MediaPresentRole).toBool());
+  EXPECT_FALSE(model.data(model.index(0), StorageDriveModel::MediaPresentRole).toBool());
   reader.mediaPresent = true;
   model.apply({reader});
   EXPECT_EQ(model.rowCount(), 1);
-  EXPECT_TRUE(
-      model.data(model.index(0), StorageDriveModel::MediaPresentRole).toBool());
+  EXPECT_TRUE(model.data(model.index(0), StorageDriveModel::MediaPresentRole).toBool());
 }

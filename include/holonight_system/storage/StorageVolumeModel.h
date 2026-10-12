@@ -1,12 +1,14 @@
 #pragma once
 #include "StorageTypes.h"
+
 #include <QAbstractListModel>
+
 #include <optional>
 
 namespace HoloNight::System {
 class StorageVolumeModel : public QAbstractListModel {
   Q_OBJECT
-public:
+ public:
   using QAbstractListModel::QAbstractListModel;
   enum Role {
     IdRole = Qt::UserRole + 1,
@@ -32,14 +34,14 @@ public:
     HintIconNameRole,
     HintSymbolicIconNameRole
   };
-  int rowCount(const QModelIndex &parent = {}) const override;
-  QVariant data(const QModelIndex &index, int role) const override;
+  int rowCount(const QModelIndex& parent = {}) const override;
+  QVariant data(const QModelIndex& index, int role) const override;
   QHash<int, QByteArray> roleNames() const override;
-  const QList<StorageVolume> &items() const { return items_; }
-  std::optional<StorageVolume> find(const QString &id) const;
-  void apply(const QList<StorageVolume> &items);
+  const QList<StorageVolume>& items() const { return items_; }
+  std::optional<StorageVolume> find(const QString& id) const;
+  void apply(const QList<StorageVolume>& items);
 
-private:
+ private:
   QList<StorageVolume> items_;
 };
-} // namespace HoloNight::System
+}  // namespace HoloNight::System

@@ -3,6 +3,7 @@
 #include <QList>
 #include <QMetaType>
 #include <QStringList>
+
 #include <optional>
 
 namespace HoloNight::System {
@@ -23,7 +24,7 @@ struct StorageDrive {
   bool canEject = false;
   bool canPowerOff = false;
   std::optional<int> rotationRate;
-  bool operator==(const StorageDrive &) const = default;
+  bool operator==(const StorageDrive&) const = default;
 };
 
 struct StorageVolume {
@@ -49,7 +50,7 @@ struct StorageVolume {
   bool locked = false;
   bool canMount = false;
   bool canUnmount = false;
-  bool operator==(const StorageVolume &) const = default;
+  bool operator==(const StorageVolume&) const = default;
 };
 
 enum class StorageOperation { Mount, Unmount, Eject, PowerOff };
@@ -63,7 +64,7 @@ struct StorageResult {
   [[nodiscard]] bool succeeded() const { return errorName.isEmpty(); }
 };
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System
 Q_DECLARE_METATYPE(HoloNight::System::StorageDrive)
 Q_DECLARE_METATYPE(HoloNight::System::StorageVolume)
 Q_DECLARE_METATYPE(HoloNight::System::StorageResult)

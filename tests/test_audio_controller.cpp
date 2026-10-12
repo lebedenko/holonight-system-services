@@ -3,7 +3,6 @@
 #include <QSignalSpy>
 
 #include <gtest/gtest.h>
-
 #include <memory>
 
 using namespace HoloNight::System;
@@ -18,8 +17,8 @@ struct BackendCalls {
 };
 
 class FakeAudioBackend final : public AudioBackend {
-public:
-  explicit FakeAudioBackend(BackendCalls *calls) : calls_(calls) {}
+ public:
+  explicit FakeAudioBackend(BackendCalls* calls) : calls_(calls) {}
 
   void start() override { ++calls_->starts; }
   void stop() override { ++calls_->stops; }
@@ -34,18 +33,17 @@ public:
   void setSourceMuted(uint32_t, bool) override {}
   void setDefaultOutput(uint32_t) override {}
   void setDefaultInput(uint32_t) override {}
-  void setDefaultOutputByName(const QString &) override {}
-  void setDefaultInputByName(const QString &) override {}
+  void setDefaultOutputByName(const QString&) override {}
+  void setDefaultInputByName(const QString&) override {}
   void setStreamVolume(uint32_t, int) override {}
   void setStreamMuted(uint32_t, bool) override {}
   void moveStreamToDevice(uint32_t, uint32_t) override {}
 
-private:
-  BackendCalls *calls_;
+ private:
+  BackendCalls* calls_;
 };
 
-AudioDevice makeDevice(uint32_t dev_id, AudioDeviceType type,
-                       uint8_t volume = 50, bool muted = false,
+AudioDevice makeDevice(uint32_t dev_id, AudioDeviceType type, uint8_t volume = 50, bool muted = false,
                        bool is_default = false) {
   AudioDevice dev;
   dev.id = dev_id;
@@ -58,19 +56,18 @@ AudioDevice makeDevice(uint32_t dev_id, AudioDeviceType type,
   return dev;
 }
 
-} // namespace
+}  // namespace
 
 TEST(AudioController, InjectedBackendDrivesLiveStateAndReceivesControls) {
   BackendCalls calls;
   auto backend = std::make_unique<FakeAudioBackend>(&calls);
-  FakeAudioBackend *backend_ptr = backend.get();
+  FakeAudioBackend* backend_ptr = backend.get();
 
   {
     AudioController controller(std::move(backend));
     controller.start();
     emit backend_ptr->availableChanged(true);
-    emit backend_ptr->deviceAdded(
-        makeDevice(42, AudioDeviceType::Sink, 65, false, true));
+    emit backend_ptr->deviceAdded(makeDevice(42, AudioDeviceType::Sink, 65, false, true));
 
     EXPECT_TRUE(controller.available());
     EXPECT_EQ(controller.outputs()->rowCount(), 1);
@@ -146,8 +143,7 @@ TEST(AudioController, SourceControlMethodsAreNoOpWithoutBackend) {
 
 TEST(AudioController, DefaultOutputStateTracksDefaultSink) {
   AudioController service(AudioController::SkipInit);
-  QSignalSpy default_output_changed(&service,
-                                    &AudioController::defaultOutputIdChanged);
+  QSignalSpy default_output_changed(&service, &AudioController::defaultOutputIdChanged);
   QSignalSpy volume_changed(&service, &AudioController::volumeChanged);
   QSignalSpy muted_changed(&service, &AudioController::mutedChanged);
 
@@ -163,11 +159,9 @@ TEST(AudioController, DefaultOutputStateTracksDefaultSink) {
 
 TEST(AudioController, DefaultOutputIgnoresDefaultSource) {
   AudioController service(AudioController::SkipInit);
-  QSignalSpy default_output_changed(&service,
-                                    &AudioController::defaultOutputIdChanged);
+  QSignalSpy default_output_changed(&service, &AudioController::defaultOutputIdChanged);
 
-  service.onDeviceAdded(
-      makeDevice(9, AudioDeviceType::Source, 63, false, true));
+  service.onDeviceAdded(makeDevice(9, AudioDeviceType::Source, 63, false, true));
 
   EXPECT_NE(service.defaultOutputId(), 9U);
   EXPECT_EQ(default_output_changed.count(), 0);
@@ -231,8 +225,7 @@ TEST(AudioController, SinkRemovalOfDefaultOutputClearsDefaultOutputId) {
   service.onDeviceAdded(makeDevice(4, AudioDeviceType::Sink, 72, true, true));
   ASSERT_EQ(service.defaultOutputId(), 4U);
 
-  QSignalSpy default_output_changed(&service,
-                                    &AudioController::defaultOutputIdChanged);
+  QSignalSpy default_output_changed(&service, &AudioController::defaultOutputIdChanged);
   service.onSinkRemoved(4);
 
   EXPECT_NE(service.defaultOutputId(), 4U);

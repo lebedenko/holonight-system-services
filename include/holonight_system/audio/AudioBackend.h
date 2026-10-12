@@ -12,7 +12,7 @@ namespace HoloNight::System {
 class AudioBackend : public QObject {
   Q_OBJECT
 
-public:
+ public:
   using QObject::QObject;
   ~AudioBackend() override = default;
 
@@ -26,13 +26,13 @@ public:
   virtual void setSourceMuted(uint32_t idx, bool muted) = 0;
   virtual void setDefaultOutput(uint32_t idx) = 0;
   virtual void setDefaultInput(uint32_t idx) = 0;
-  virtual void setDefaultOutputByName(const QString &name) = 0;
-  virtual void setDefaultInputByName(const QString &name) = 0;
+  virtual void setDefaultOutputByName(const QString& name) = 0;
+  virtual void setDefaultInputByName(const QString& name) = 0;
   virtual void setStreamVolume(uint32_t idx, int percent) = 0;
   virtual void setStreamMuted(uint32_t idx, bool muted) = 0;
   virtual void moveStreamToDevice(uint32_t stream_idx, uint32_t device_idx) = 0;
 
-Q_SIGNALS:
+ Q_SIGNALS:
   void deviceAdded(AudioDevice device);
   void sinkRemoved(uint32_t idx);
   void sourceRemoved(uint32_t idx);
@@ -45,4 +45,4 @@ Q_SIGNALS:
   void inputLevelChanged(int level);
 };
 
-} // namespace HoloNight::System
+}  // namespace HoloNight::System
