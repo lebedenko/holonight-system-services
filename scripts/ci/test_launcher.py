@@ -78,6 +78,8 @@ class LauncherTests(unittest.TestCase):
             self.assertEqual(launcher.main(), 0)
         command, accounts = json.loads(arguments.read_text())
         self.assertIn('--userns=keep-id', command)
+        self.assertIn('--pull=never', command)
+        self.assertIn('--network=none', command)
         self.assertEqual(command[command.index('--user') + 1], '1000:1000')
         self.assertTrue(command[command.index('--mount') + 1].endswith(',dst=/input,readonly'))
         self.assertIn('ci:x:1000:1000:CI:/work/build/home:/bin/sh\n', accounts['/etc/passwd'])

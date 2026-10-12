@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: [build-all, build-audio, build-storage]
+        lane: [build-all, build-audio, build-storage, build-compositor, build-compositor-no-wayland, build-core, static-checks]
     steps:
       - uses: actions/checkout@v4
-      - run: python3 scripts/ci/run.py --lane ${{ matrix.lane }}
+      - run: python3 scripts/ci/run.py --acquire-images --lane ${{ matrix.lane }}

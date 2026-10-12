@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-LANES = ('build-all', 'build-audio', 'build-storage', 'licensing')
+LANES = ('build-all', 'build-audio', 'build-storage', 'build-compositor', 'build-compositor-no-wayland', 'build-core', 'static-checks', 'licensing')
 
 
 def git(*args):
@@ -38,6 +38,7 @@ def snapshot(destination):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--lane', choices=LANES, action='append')
+    parser.add_argument('--acquire-images', action='store_true', help='Explicitly pull required images before offline acceptance')
     args = parser.parse_args()
     output = ROOT / 'build' / 'ci'
     output.mkdir(parents=True, exist_ok=True)
@@ -54,6 +55,9 @@ def main():
             raise RuntimeError('Neither Docker nor Podman is available; install a container runtime.')
         report['runtime'] = subprocess.check_output([runtime, '--version'], text=True).strip()
         images = json.loads((ROOT / 'scripts/ci/images.json').read_text())
+        if args.acquire_images:
+            for image in dict.fromkeys(images['licensing' if lane == 'licensing' else 'build'] for lane in args.lane or LANES):
+                subprocess.run([runtime, 'pull', '--platform', report['platform'], image], check=True)
         with tempfile.TemporaryDirectory(prefix='holonight-system-services-ci-') as temporary:
             source = Path(temporary) / 'source'
             source.mkdir()
@@ -74,7 +78,7 @@ def main():
                     print(f'  {name!r}')
             for lane in args.lane or LANES:
                 image = images['licensing' if lane == 'licensing' else 'build']
-                command = [runtime, 'run', '--rm', '--platform', report['platform'], '--user', f'{os.getuid()}:{os.getgid()}',
+                command = [runtime, 'run', '--rm', '--pull=never', '--network=none', '--platform', report['platform'], '--user', f'{os.getuid()}:{os.getgid()}',
                            '--mount', f'type=bind,src={source},dst=/input,readonly',
                            '--tmpfs', '/work:rw,exec,mode=1777', '--workdir', '/work',
                            '--entrypoint', '/bin/sh', image, '/input/scripts/ci/lane.sh', lane]

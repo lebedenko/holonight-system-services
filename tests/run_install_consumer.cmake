@@ -28,3 +28,6 @@ execute_process(COMMAND "${TEST_BINARY_DIR}/consumer/audio-consumer" RESULT_VARI
 if(NOT consumer_result EQUAL 0)
   message(FATAL_ERROR "Audio consumer run failed")
 endif()
+
+set(UNAVAILABLE_COMPONENTS Storage Compositor)
+include("${CMAKE_CURRENT_LIST_DIR}/check_unavailable_components.cmake")

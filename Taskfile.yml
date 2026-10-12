@@ -4,6 +4,10 @@ tasks:
     desc: Rehearse all push validation in isolated containers
     cmds:
     - python3 scripts/ci/run.py
+  ci:prepare:
+    desc: Acquire immutable images and run offline acceptance
+    cmds:
+    - python3 scripts/ci/run.py --acquire-images
   license-check:
     desc: Validate REUSE licensing metadata
     cmds:

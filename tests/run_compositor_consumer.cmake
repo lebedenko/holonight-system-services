@@ -13,3 +13,6 @@ run(${CMAKE_COMMAND} -S "${CMAKE_CURRENT_LIST_DIR}/compositor-consumer" -B "${TE
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH=${TEST_BINARY_DIR}/prefix)
 run(${CMAKE_COMMAND} --build "${TEST_BINARY_DIR}/consumer")
 run("${TEST_BINARY_DIR}/consumer/compositor-consumer")
+
+set(UNAVAILABLE_COMPONENTS Audio Storage)
+include("${CMAKE_CURRENT_LIST_DIR}/check_unavailable_components.cmake")

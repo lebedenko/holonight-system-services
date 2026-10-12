@@ -11,4 +11,6 @@ with `cmake --build build`, and run `ctest --test-dir build --output-on-failure`
 install-tree consumer test and deterministic backend-interface coverage.
 
 Developer tooling uses `build/debug`, `build/test`, `build/release` and module-owned `build/deps`.
+Normal configure/build/test never acquire dependencies; use task deps explicitly. Qt >=6.11 and installed
+GTest >=1.14 CONFIG with GMock are required for enabled tests. Disable unwanted components explicitly.
 See tooling/README.md; run task tooling:refresh explicitly after configuring/building for editor metadata.

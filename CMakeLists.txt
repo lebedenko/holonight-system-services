@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
+include(tooling/dependencies.cmake)
+
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 install(FILES LICENSE THIRD_PARTY_NOTICES.md LICENSES/HPND-sell-variant.txt LICENSES/GPL-3.0-or-later.txt
@@ -12,14 +14,14 @@ install(FILES LICENSE THIRD_PARTY_NOTICES.md LICENSES/HPND-sell-variant.txt LICE
 
 option(BUILD_TESTS "Build unit and package-consumer tests" OFF)
 
-find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 6.11 REQUIRED COMPONENTS Core)
 
 option(BUILD_COMPOSITOR "Build the Compositor component" ON)
 option(BUILD_COMPOSITOR_WAYLAND "Build compositor Wayland protocol implementations" ON)
 if(BUILD_COMPOSITOR)
-  find_package(Qt6 REQUIRED COMPONENTS Network)
+  find_package(Qt6 6.11 REQUIRED COMPONENTS Network)
   if(BUILD_COMPOSITOR_WAYLAND)
-    find_package(Qt6 REQUIRED COMPONENTS Gui WaylandClient)
+    find_package(Qt6 6.11 REQUIRED COMPONENTS Gui WaylandClient)
   endif()
   add_subdirectory(src/compositor)
 endif()
@@ -27,7 +29,7 @@ endif()
 option(BUILD_AUDIO "Build the Audio component" ON)
 option(BUILD_STORAGE "Build the Storage component" ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 6.11 REQUIRED COMPONENTS Core)
 if(BUILD_AUDIO)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(LIBPULSE REQUIRED IMPORTED_TARGET libpulse)
@@ -63,7 +65,7 @@ if(BUILD_AUDIO)
 endif()
 
 if(BUILD_STORAGE)
-  find_package(Qt6 REQUIRED COMPONENTS DBus)
+  find_package(Qt6 6.11 REQUIRED COMPONENTS DBus)
   add_library(holonight_system_storage STATIC
     include/holonight_system/storage/StorageTypes.h
     include/holonight_system/storage/StorageBackend.h
@@ -114,7 +116,12 @@ install(FILES
 
 if(BUILD_TESTS)
   enable_testing()
-  find_package(Qt6 REQUIRED COMPONENTS Test)
-  find_package(GTest CONFIG REQUIRED)
+  find_package(Qt6 6.11 REQUIRED COMPONENTS Test)
+  find_package(GTest 1.14 CONFIG REQUIRED)
+  foreach(target GTest::gtest GTest::gmock)
+    if(NOT TARGET ${target})
+      message(FATAL_ERROR "Installed GTest >=1.14 must provide ${target}")
+    endif()
+  endforeach()
   add_subdirectory(tests)
 endif()
