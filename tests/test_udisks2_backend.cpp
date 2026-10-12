@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+// Short fixture IDs mirror the small drive/volume graphs under test.
+// NOLINTBEGIN(readability-identifier-length)
 using namespace HoloNight::System;
 namespace {
 const QString service = QStringLiteral("org.holonight.TestUDisks");
@@ -32,23 +34,25 @@ class FakeUDisks : public QDBusVirtualObject {
     objects[QDBusObjectPath(drivePath)][driveInterface] = {
         {"Vendor", "Test"},       {"Model", "External SSD"}, {"Removable", true},  {"MediaRemovable", false},
         {"MediaAvailable", true}, {"CanPowerOff", true},     {"Ejectable", false}, {"SiblingId", "usb"}};
-    objects[QDBusObjectPath(volumePath)][blockInterface] = {{"Drive", QVariant::fromValue(QDBusObjectPath(drivePath))},
-                                                            {"IdUsage", "filesystem"},
-                                                            {"IdType", "ext4"},
-                                                            {"IdLabel", "Data"},
-                                                            {"Size", QVariant::fromValue(quint64(4000000000ULL))},
-                                                            {"HintSystem", true},
-                                                            {"HintIgnore", false},
-                                                            {"PreferredDevice", QByteArray("/dev/sdb1\0", 10)}};
+    objects[QDBusObjectPath(volumePath)][blockInterface] = {
+        {"Drive", QVariant::fromValue(QDBusObjectPath(drivePath))},
+        {"IdUsage", "filesystem"},
+        {"IdType", "ext4"},
+        {"IdLabel", "Data"},
+        {"Size", QVariant::fromValue(static_cast<quint64>(4000000000ULL))},
+        {"HintSystem", true},
+        {"HintIgnore", false},
+        {"PreferredDevice", QByteArray("/dev/sdb1\0", 10)}};
     objects[QDBusObjectPath(volumePath)][fsInterface] = {{"MountPoints", QVariant::fromValue(QList<QByteArray>{})}};
   }
-  QString introspect(const QString&) const override { return {}; }
-  bool handleMessage(const QDBusMessage& message, const QDBusConnection&) override {
+  [[nodiscard]] QString introspect(const QString& /*path*/) const override { return {}; }
+  bool handleMessage(const QDBusMessage& message, const QDBusConnection& /*connection*/) override {
     if (message.member() == QLatin1String("GetManagedObjects")) {
-      if (holdSnapshots)
+      if (holdSnapshots) {
         pendingSnapshots.append(message);
-      else
+      } else {
         replySnapshot(message, objects);
+      }
       return true;
     }
     if (message.interface() == fsInterface || message.interface() == driveInterface) {
@@ -56,15 +60,16 @@ class FakeUDisks : public QDBusVirtualObject {
       EXPECT_EQ(message.arguments().size(), 1);
       EXPECT_TRUE(qdbus_cast<QVariantMap>(message.arguments().first()).isEmpty());
       methods.append(message.member());
-      if (holdOperations)
+      if (holdOperations) {
         pendingOperations.append(message);
-      else
+      } else {
         replyOperation(message);
+      }
       return true;
     }
     return false;
   }
-  void replySnapshot(const QDBusMessage& message, const StorageObjects& snapshot) {
+  void replySnapshot(const QDBusMessage& message, const StorageObjects& snapshot) const {
     bus.send(message.createReply({QVariant::fromValue(snapshot)}));
   }
   void replyOperation(const QDBusMessage& message) {
@@ -77,12 +82,13 @@ class FakeUDisks : public QDBusVirtualObject {
           QVariant::fromValue(QList<QByteArray>{QByteArray("/media/Data\0", 12)});
       bus.send(message.createReply(QVariantList{QStringLiteral("/media/Data")}));
     } else {
-      if (message.member() == QLatin1String("Unmount"))
+      if (message.member() == QLatin1String("Unmount")) {
         objects[QDBusObjectPath(message.path())][fsInterface]["MountPoints"] = QVariant::fromValue(QList<QByteArray>{});
+      }
       bus.send(message.createReply());
     }
   }
-  void changed(QStringList invalidated = {}) {
+  void changed(const QStringList& invalidated = {}) const {
     auto signal = QDBusMessage::createSignal(volumePath, "org.freedesktop.DBus.Properties", "PropertiesChanged");
     signal << blockInterface << QVariantMap{} << invalidated;
     bus.send(signal);
@@ -102,8 +108,11 @@ class FakeUDisks : public QDBusVirtualObject {
 };
 class UDisksTest : public testing::Test {
  protected:
+  // GoogleTest generates derived fixtures which share this session state.
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes)
   QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, "storage-test-service");
   FakeUDisks fake{bus};
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
   void SetUp() override {
     qDBusRegisterMetaType<StorageObjects>();
     qDBusRegisterMetaType<StorageInterfaces>();
@@ -274,8 +283,10 @@ TEST_F(UDisksTest, MountRefreshesModelBeforeCompletionAndPropagatesBusy) {
   EXPECT_TRUE(c.volumes()->find(id)->canUnmount);
 }
 TEST_F(UDisksTest, IndependentControllersSeeUpstreamMountAndConflictingFailure) {
-  UDisks2Backend a(QDBusConnection::sessionBus(), service), b(QDBusConnection::sessionBus(), service);
-  StorageController first(&a), second(&b);
+  UDisks2Backend a(QDBusConnection::sessionBus(), service);
+  UDisks2Backend b(QDBusConnection::sessionBus(), service);
+  StorageController first(&a);
+  StorageController second(&b);
   ASSERT_TRUE(QTest::qWaitFor([&] { return first.available() && second.available(); }));
   QSignalSpy completed(&first, &StorageController::operationFinished);
   first.mount(first.volumes()->items().first().id);
@@ -331,12 +342,13 @@ TEST_F(UDisksTest, LockedAndUnlockedStorageKeepFullBackingTopology) {
   fake.changed();
   ASSERT_TRUE(QTest::qWaitFor([&] { return c.volumes()->rowCount() == 2; }));
   EXPECT_FALSE(c.volumes()->find(locked.id)->locked);
-  for (const auto& v : c.volumes()->items())
+  for (const auto& v : c.volumes()->items()) {
     if (v.id != locked.id) {
       EXPECT_EQ(v.cryptoBackingId, locked.id);
       EXPECT_EQ(v.driveId, locked.driveId);
       EXPECT_TRUE(v.canMount);
     }
+  }
 }
 TEST_F(UDisksTest, MountReplyForRemovedVolumeCannotNavigateUsingStalePath) {
   UDisks2Backend backend(QDBusConnection::sessionBus(), service);
@@ -389,3 +401,5 @@ TEST_F(UDisksTest, RotationRatePreservesAbsenceAndUpdatesStableRows) {
   EXPECT_TRUE(index.isValid());
   EXPECT_EQ(changes.count(), 4);
 }
+
+// NOLINTEND(readability-identifier-length)

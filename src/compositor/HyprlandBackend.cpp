@@ -156,7 +156,9 @@ void HyprlandBackend::scheduleRefresh() {
     refresh_dirty_ = true;
     return;
   }
-  if (refresh_scheduled_) return;
+  if (refresh_scheduled_) {
+    return;
+  }
   refresh_scheduled_ = true;
   QTimer::singleShot(0, this, [this] {
     refresh_scheduled_ = false;

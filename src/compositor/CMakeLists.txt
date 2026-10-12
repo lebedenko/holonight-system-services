@@ -21,6 +21,8 @@ if(BUILD_COMPOSITOR_WAYLAND)
     GenericWorkspaceState.h LabwcBackend.cpp LabwcBackend.h ForeignToplevelState.h)
   target_compile_definitions(holonight_system_compositor PRIVATE HOLONIGHT_COMPOSITOR_WAYLAND)
   target_link_libraries(holonight_system_compositor PRIVATE Qt6::Gui Qt6::WaylandClient PkgConfig::WAYLAND_CLIENT)
+  # Generated Qt/Wayland declarations follow their upstream naming and ABI.
+  target_include_directories(holonight_system_compositor SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
   qt6_generate_wayland_protocol_client_sources(holonight_system_compositor FILES
     ${PROJECT_SOURCE_DIR}/protocols/ext-workspace-v1.xml
     ${PROJECT_SOURCE_DIR}/protocols/wlr-foreign-toplevel-management-unstable-v1.xml)

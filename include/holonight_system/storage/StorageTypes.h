@@ -8,6 +8,8 @@
 
 namespace HoloNight::System {
 
+// Public record field names are part of the established consumer API.
+// NOLINTBEGIN(readability-identifier-naming)
 struct StorageDrive {
   QString id;
   QString vendor;
@@ -53,6 +55,7 @@ struct StorageVolume {
   bool operator==(const StorageVolume&) const = default;
 };
 
+// NOLINTNEXTLINE(performance-enum-size): Preserve the existing public enum ABI.
 enum class StorageOperation { Mount, Unmount, Eject, PowerOff };
 struct StorageResult {
   QString requestId;
@@ -64,6 +67,7 @@ struct StorageResult {
   [[nodiscard]] bool succeeded() const { return errorName.isEmpty(); }
 };
 
+// NOLINTEND(readability-identifier-naming)
 }  // namespace HoloNight::System
 Q_DECLARE_METATYPE(HoloNight::System::StorageDrive)
 Q_DECLARE_METATYPE(HoloNight::System::StorageVolume)

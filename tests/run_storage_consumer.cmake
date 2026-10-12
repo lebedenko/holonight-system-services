@@ -11,6 +11,6 @@ run(${CMAKE_COMMAND} -S "${PROVIDER_SOURCE_DIR}" -B "${TEST_BINARY_DIR}/provider
 run(${CMAKE_COMMAND} --build "${TEST_BINARY_DIR}/provider" --parallel 2)
 run(${CMAKE_COMMAND} --install "${TEST_BINARY_DIR}/provider")
 run(${CMAKE_COMMAND} -S "${CMAKE_CURRENT_LIST_DIR}/storage-consumer" -B "${TEST_BINARY_DIR}/consumer"
-  -DCMAKE_PREFIX_PATH=${TEST_BINARY_DIR}/prefix)
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH=${TEST_BINARY_DIR}/prefix)
 run(${CMAKE_COMMAND} --build "${TEST_BINARY_DIR}/consumer" --parallel 2)
 run("${TEST_BINARY_DIR}/consumer/storage-consumer")

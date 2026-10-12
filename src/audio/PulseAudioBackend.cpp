@@ -74,7 +74,7 @@ QString classifyBusType(const pa_proplist* proplist, const QString& device_name,
 static QString iconNameFromProplist(const pa_proplist* proplist, bool is_sink, const QString& device_name,
                                     const QString& active_port_name) {
   const char* icon = proplist != nullptr ? pa_proplist_gets(proplist, PA_PROP_DEVICE_ICON_NAME) : nullptr;
-  const QString reported_icon = QString::fromUtf8(icon != nullptr ? icon : "");
+  QString reported_icon = QString::fromUtf8(icon != nullptr ? icon : "");
 
   const char* form_factor = proplist != nullptr ? pa_proplist_gets(proplist, PA_PROP_DEVICE_FORM_FACTOR) : nullptr;
   const QString form_factor_str = QString::fromUtf8(form_factor != nullptr ? form_factor : "");
@@ -309,8 +309,8 @@ bool PulseAudioBackend::Impl::startLevelStreamLocked() {
   attr.maxlength = UINT32_MAX;
   attr.fragsize = pa_frame_size(&sample_spec);
 
-  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) — OR-ing valid
-  // bitmask constants
+  // PulseAudio defines this C enum as a combinable bitmask.
+  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
   const auto flags = static_cast<pa_stream_flags_t>(PA_STREAM_DONT_MOVE | PA_STREAM_PEAK_DETECT |
                                                     PA_STREAM_ADJUST_LATENCY | PA_STREAM_AUTO_TIMING_UPDATE);
   const int connect_result =
@@ -422,8 +422,8 @@ void PulseAudioBackend::Impl::onContextReady() {
   const int subscription_mask = PA_SUBSCRIPTION_MASK_SINK | PA_SUBSCRIPTION_MASK_SOURCE |
                                 PA_SUBSCRIPTION_MASK_SINK_INPUT | PA_SUBSCRIPTION_MASK_SOURCE_OUTPUT |
                                 PA_SUBSCRIPTION_MASK_SERVER;
-  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) — OR-ing valid
-  // bitmask constants
+  // PulseAudio defines this C enum as a combinable bitmask.
+  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
   const auto subscription_flags = static_cast<pa_subscription_mask_t>(subscription_mask);
   pa_operation* subscribe_operation =
       pulseSystem()->pa_context_subscribe(context, subscription_flags, nullptr, nullptr);
@@ -801,7 +801,7 @@ PulseAudioBackend::PulseAudioBackend(QObject* parent)
   connect(reconnect_timer_, &QTimer::timeout, this, &PulseAudioBackend::attemptReconnect);
 }
 
-PulseAudioBackend::~PulseAudioBackend() { stop(); }
+PulseAudioBackend::~PulseAudioBackend() { PulseAudioBackend::stop(); }
 
 void PulseAudioBackend::start() {
   if (impl_->started) {

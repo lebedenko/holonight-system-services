@@ -16,7 +16,7 @@ if(NOT install_result EQUAL 0)
   message(FATAL_ERROR "Provider install failed")
 endif()
 execute_process(COMMAND ${CMAKE_COMMAND} -S "${CMAKE_CURRENT_LIST_DIR}/package-consumer"
-  -B "${TEST_BINARY_DIR}/consumer" -DCMAKE_PREFIX_PATH=${TEST_BINARY_DIR}/prefix RESULT_VARIABLE consumer_configure_result)
+  -B "${TEST_BINARY_DIR}/consumer" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH=${TEST_BINARY_DIR}/prefix RESULT_VARIABLE consumer_configure_result)
 if(NOT consumer_configure_result EQUAL 0)
   message(FATAL_ERROR "Audio consumer configure failed")
 endif()

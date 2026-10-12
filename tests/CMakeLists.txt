@@ -50,7 +50,8 @@ endif()
 
 if(BUILD_COMPOSITOR AND BUILD_COMPOSITOR_WAYLAND)
   add_executable(labwc_protocol_smoke labwc_protocol_smoke.cpp)
-  target_include_directories(labwc_protocol_smoke PRIVATE ${PROJECT_SOURCE_DIR}/src/compositor ${PROJECT_BINARY_DIR}/src/compositor)
+  target_include_directories(labwc_protocol_smoke PRIVATE ${PROJECT_SOURCE_DIR}/src/compositor)
+  target_include_directories(labwc_protocol_smoke SYSTEM PRIVATE ${PROJECT_BINARY_DIR}/src/compositor)
   target_link_libraries(labwc_protocol_smoke PRIVATE HoloNightSystem::Compositor Qt6::Gui Qt6::WaylandClient)
 endif()
 

@@ -10,6 +10,8 @@ class StorageVolumeModel : public QAbstractListModel {
   Q_OBJECT
  public:
   using QAbstractListModel::QAbstractListModel;
+  // Qt model roles require implicit integer conversion; preserve their public ABI.
+  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class,performance-enum-size)
   enum Role {
     IdRole = Qt::UserRole + 1,
     DriveIdRole,
@@ -34,11 +36,11 @@ class StorageVolumeModel : public QAbstractListModel {
     HintIconNameRole,
     HintSymbolicIconNameRole
   };
-  int rowCount(const QModelIndex& parent = {}) const override;
-  QVariant data(const QModelIndex& index, int role) const override;
-  QHash<int, QByteArray> roleNames() const override;
-  const QList<StorageVolume>& items() const { return items_; }
-  std::optional<StorageVolume> find(const QString& id) const;
+  [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
+  [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
+  [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
+  [[nodiscard]] const QList<StorageVolume>& items() const { return items_; }
+  [[nodiscard]] std::optional<StorageVolume> find(const QString& identifier) const;
   void apply(const QList<StorageVolume>& items);
 
  private:

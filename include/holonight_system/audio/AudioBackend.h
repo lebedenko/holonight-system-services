@@ -15,6 +15,10 @@ class AudioBackend : public QObject {
  public:
   using QObject::QObject;
   ~AudioBackend() override = default;
+  AudioBackend(const AudioBackend&) = delete;
+  AudioBackend& operator=(const AudioBackend&) = delete;
+  AudioBackend(AudioBackend&&) = delete;
+  AudioBackend& operator=(AudioBackend&&) = delete;
 
   virtual void start() = 0;
   virtual void stop() = 0;

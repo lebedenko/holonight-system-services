@@ -28,16 +28,16 @@ class FakeAudioBackend final : public AudioBackend {
     calls_->volume_device = idx;
     calls_->volume = percent;
   }
-  void setDeviceMuted(uint32_t, bool) override {}
-  void setSourceVolume(uint32_t, int) override {}
-  void setSourceMuted(uint32_t, bool) override {}
-  void setDefaultOutput(uint32_t) override {}
-  void setDefaultInput(uint32_t) override {}
-  void setDefaultOutputByName(const QString&) override {}
-  void setDefaultInputByName(const QString&) override {}
-  void setStreamVolume(uint32_t, int) override {}
-  void setStreamMuted(uint32_t, bool) override {}
-  void moveStreamToDevice(uint32_t, uint32_t) override {}
+  void setDeviceMuted(uint32_t /*idx*/, bool /*muted*/) override {}
+  void setSourceVolume(uint32_t /*idx*/, int /*percent*/) override {}
+  void setSourceMuted(uint32_t /*idx*/, bool /*muted*/) override {}
+  void setDefaultOutput(uint32_t /*idx*/) override {}
+  void setDefaultInput(uint32_t /*idx*/) override {}
+  void setDefaultOutputByName(const QString& /*name*/) override {}
+  void setDefaultInputByName(const QString& /*name*/) override {}
+  void setStreamVolume(uint32_t /*idx*/, int /*percent*/) override {}
+  void setStreamMuted(uint32_t /*idx*/, bool /*muted*/) override {}
+  void moveStreamToDevice(uint32_t /*stream_idx*/, uint32_t /*device_idx*/) override {}
 
  private:
   BackendCalls* calls_;

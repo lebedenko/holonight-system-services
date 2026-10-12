@@ -5,7 +5,10 @@
 #include <QSignalSpy>
 
 #include <gtest/gtest.h>
+#include <utility>
 
+// Short fixture IDs mirror the small drive/volume graphs under test.
+// NOLINTBEGIN(readability-identifier-length)
 using namespace HoloNight::System;
 namespace {
 class Backend : public StorageBackend {
@@ -16,41 +19,46 @@ class Backend : public StorageBackend {
   void start() override {}
   void stop() override {}
   void execute(const QString& id, StorageOperation op, const QString& target) override {
-    calls.append({id, target, op, {}, {}, {}});
+    calls.append(
+        {.requestId = id, .targetId = target, .operation = op, .mountPath = {}, .errorName = {}, .errorMessage = {}});
   }
   void publish() { emit snapshotChanged(drives, volumes, true); }
-  void complete(QString failure = {}, QString path = {}) {
+  void complete(const QString& failure = {}, QString path = {}) {
     auto result = calls.last();
     result.errorName = failure;
-    result.mountPath = path;
-    if (failure.isEmpty() && result.operation == StorageOperation::Unmount)
-      for (auto& v : volumes)
+    result.mountPath = std::move(path);
+    if (failure.isEmpty() && result.operation == StorageOperation::Unmount) {
+      for (auto& v : volumes) {
         if (v.id == result.targetId) {
           v.mountPoints.clear();
           v.canUnmount = false;
           v.canMount = true;
         }
+      }
+    }
     publish();
     emit operationFinished(result);
   }
 };
 StorageDrive drive(QString id, QString sibling = {}) {
   StorageDrive d;
-  d.id = id;
-  d.siblingId = sibling;
+  d.id = std::move(id);
+  d.siblingId = std::move(sibling);
   d.removable = true;
   d.mediaPresent = true;
   d.canEject = true;
   d.canPowerOff = true;
   return d;
 }
-StorageVolume volume(QString id, QString driveId, bool mounted = true) {
+StorageVolume volume(const QString& id, QString driveId, bool mounted = true) {
   StorageVolume v;
   v.id = id;
-  v.driveId = driveId;
+  v.driveId = std::move(driveId);
   v.canMount = !mounted;
   v.canUnmount = mounted;
-  if (mounted) v.mountPoints = {QStringLiteral("/mnt/") + id};
+  if (mounted) {
+    v.mountPoints = {QStringLiteral("/mnt/") + id};
+  }
   return v;
 }
 void dispatch() { QCoreApplication::processEvents(); }
@@ -236,3 +244,5 @@ TEST(StorageModels, DriveModelRetainsEmptyReadersAndAllRawFacts) {
   EXPECT_EQ(model.rowCount(), 1);
   EXPECT_TRUE(model.data(model.index(0), StorageDriveModel::MediaPresentRole).toBool());
 }
+
+// NOLINTEND(readability-identifier-length)

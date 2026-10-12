@@ -6,8 +6,9 @@ int StorageVolumeModel::rowCount(const QModelIndex& parent) const {
 }
 QVariant StorageVolumeModel::data(const QModelIndex& index, int role) const {
   if (!index.isValid() || index.model() != this || index.column() != 0 || index.row() < 0 ||
-      index.row() >= items_.size())
+      index.row() >= items_.size()) {
     return {};
+  }
   const auto& item = items_.at(index.row());
   switch (role) {
     case IdRole:
@@ -82,20 +83,24 @@ QHash<int, QByteArray> StorageVolumeModel::roleNames() const {
           {HintIconNameRole, "hintIconName"},
           {HintSymbolicIconNameRole, "hintSymbolicIconName"}};
 }
-std::optional<StorageVolume> StorageVolumeModel::find(const QString& id) const {
-  for (const auto& item : items_)
-    if (item.id == id) return item;
+std::optional<StorageVolume> StorageVolumeModel::find(const QString& identifier) const {
+  for (const auto& item : items_) {
+    if (item.id == identifier) {
+      return item;
+    }
+  }
   return std::nullopt;
 }
 void StorageVolumeModel::apply(const QList<StorageVolume>& items) {
   // Preserve rows and persistent indexes for unchanged identities.
   for (int i = static_cast<int>(items_.size()) - 1; i >= 0; --i) {
     bool present = false;
-    for (const auto& item : items)
+    for (const auto& item : items) {
       if (item.id == items_[i].id) {
         present = true;
         break;
       }
+    }
     if (!present) {
       beginRemoveRows({}, i, i);
       items_.removeAt(i);
@@ -104,7 +109,9 @@ void StorageVolumeModel::apply(const QList<StorageVolume>& items) {
   }
   for (const auto& item : items) {
     int row = 0;
-    while (row < items_.size() && items_[row].id != item.id) ++row;
+    while (row < items_.size() && items_[row].id != item.id) {
+      ++row;
+    }
     if (row == items_.size()) {
       beginInsertRows({}, row, row);
       items_.append(item);

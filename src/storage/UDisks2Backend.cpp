@@ -24,13 +24,17 @@ const QString partitionInterface = QStringLiteral("org.freedesktop.UDisks2.Parti
 const QString encryptedInterface = QStringLiteral("org.freedesktop.UDisks2.Encrypted");
 QString pathValue(const QVariant& value) { return qvariant_cast<QDBusObjectPath>(value).path(); }
 QString bytePath(QByteArray value) {
-  while (value.endsWith('\0')) value.chop(1);
+  while (value.endsWith('\0')) {
+    value.chop(1);
+  }
   return QFile::decodeName(value);
 }
 QStringList mountPoints(const QVariant& value) {
   const auto paths = qdbus_cast<QList<QByteArray>>(value);
   QStringList result;
-  for (const auto& path : paths) result.append(bytePath(path));
+  for (const auto& path : paths) {
+    result.append(bytePath(path));
+  }
   return result;
 }
 QString key(const QString& path, const QString& interface) { return path + QLatin1Char('#') + interface; }
@@ -46,7 +50,9 @@ UDisks2Backend::UDisks2Backend(QDBusConnection connection, QString service, QObj
   connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, &UDisks2Backend::ownerChanged);
 }
 void UDisks2Backend::start() {
-  if (started_) return;
+  if (started_) {
+    return;
+  }
   started_ = true;
   connection_.connect(service_, root, manager, QStringLiteral("InterfacesAdded"), this,
                       SLOT(interfacesAdded(QDBusObjectPath, HoloNight::System::StorageInterfaces)));
@@ -63,19 +69,25 @@ void UDisks2Backend::start() {
   connect(call, &QDBusPendingCallWatcher::finished, this, [this, generation](QDBusPendingCallWatcher* watcher) {
     const QDBusPendingReply<QString> reply = *watcher;
     watcher->deleteLater();
-    if (!started_ || generation != generation_) return;
+    if (!started_ || generation != generation_) {
+      return;
+    }
     if (reply.isError()) {
-      if (reply.error().name() == QLatin1String("org.freedesktop.DBus.Error.NameHasNoOwner"))
+      if (reply.error().name() == QLatin1String("org.freedesktop.DBus.Error.NameHasNoOwner")) {
         setOwner(service_);  // Let the first discovery call activate an
                              // installed UDisks service.
-      else
+      } else {
         emit snapshotChanged({}, {}, false);
-    } else
+      }
+    } else {
       setOwner(reply.value());
+    }
   });
 }
 void UDisks2Backend::stop() {
-  if (!started_) return;
+  if (!started_) {
+    return;
+  }
   started_ = false;
   connection_.disconnect(service_, root, manager, QStringLiteral("InterfacesAdded"), this,
                          SLOT(interfacesAdded(QDBusObjectPath, HoloNight::System::StorageInterfaces)));
@@ -85,8 +97,10 @@ void UDisks2Backend::stop() {
                          SLOT(propertiesChanged(QString, QVariantMap, QStringList, QDBusMessage)));
   setOwner({});
 }
-void UDisks2Backend::ownerChanged(const QString&, const QString&, const QString& owner) {
-  if (started_) setOwner(owner);
+void UDisks2Backend::ownerChanged(const QString& /*unused*/, const QString& /*unused*/, const QString& owner) {
+  if (started_) {
+    setOwner(owner);
+  }
 }
 void UDisks2Backend::setOwner(const QString& owner) {
   ++generation_;
@@ -96,23 +110,36 @@ void UDisks2Backend::setOwner(const QString& owner) {
   ids_.clear();
   completions_.clear();
   emit snapshotChanged({}, {}, false);
-  if (!owner_.isEmpty()) refresh();
+  if (!owner_.isEmpty()) {
+    refresh();
+  }
 }
-void UDisks2Backend::interfacesAdded(const QDBusObjectPath&, const StorageInterfaces&) { changed(); }
-void UDisks2Backend::interfacesRemoved(const QDBusObjectPath& path, const QStringList& interfaces) {
-  for (const auto& interface : interfaces) ids_.remove(key(path.path(), interface));
+void UDisks2Backend::interfacesAdded(const QDBusObjectPath& /*unused*/, const StorageInterfaces& /*unused*/) {
   changed();
 }
-void UDisks2Backend::propertiesChanged(const QString&, const QVariantMap&, const QStringList&, const QDBusMessage&) {
+void UDisks2Backend::interfacesRemoved(const QDBusObjectPath& path, const QStringList& interfaces) {
+  for (const auto& interface : interfaces) {
+    ids_.remove(key(path.path(), interface));
+  }
+  changed();
+}
+void UDisks2Backend::propertiesChanged(const QString& /*unused*/, const QVariantMap& /*unused*/,
+                                       const QStringList& /*unused*/, const QDBusMessage& /*unused*/) {
   // A fresh authoritative snapshot also resolves invalidated properties.
   changed();
 }
 void UDisks2Backend::changed() {
   ++revision_;
-  if (started_ && !owner_.isEmpty()) refresh();
+  if (started_ && !owner_.isEmpty()) {
+    refresh();
+  }
 }
+// The watcher is QObject-parented and deleteLater() is called on completion.
+// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 void UDisks2Backend::refresh() {
-  if (refreshing_ || owner_.isEmpty()) return;
+  if (refreshing_ || owner_.isEmpty()) {
+    return;
+  }
   refreshing_ = true;
   const auto generation = generation_;
   const auto revision = revision_;
@@ -122,7 +149,9 @@ void UDisks2Backend::refresh() {
           [this, generation, revision](QDBusPendingCallWatcher* watcher) {
             const QDBusPendingReply<StorageObjects> reply = *watcher;
             watcher->deleteLater();
-            if (generation != generation_) return;
+            if (generation != generation_) {
+              return;
+            }
             refreshing_ = false;
             if (revision != revision_) {
               refresh();
@@ -146,24 +175,32 @@ void UDisks2Backend::refresh() {
             }
           });
 }
+// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 QString UDisks2Backend::idFor(const QString& path, const QString& interface) {
-  auto& id = ids_[key(path, interface)];
-  if (id.isEmpty()) id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-  return id;
+  auto& identifier = ids_[key(path, interface)];
+  if (identifier.isEmpty()) {
+    identifier = QUuid::createUuid().toString(QUuid::WithoutBraces);
+  }
+  return identifier;
 }
+// Decode the complete UDisks object graph together so topology checks remain visible.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void UDisks2Backend::publish(const StorageObjects& objects) {
   QSet<QString> live;
-  for (auto it = objects.cbegin(); it != objects.cend(); ++it)
-    for (const auto& interface : {driveInterface, blockInterface})
+  for (auto it = objects.cbegin(); it != objects.cend(); ++it) {
+    for (const auto& interface : {driveInterface, blockInterface}) {
       if (it->contains(interface)) {
         live.insert(key(it.key().path(), interface));
         idFor(it.key().path(), interface);
       }
+    }
+  }
   for (auto it = ids_.begin(); it != ids_.end();) {
-    if (!live.contains(it.key()))
+    if (!live.contains(it.key())) {
       it = ids_.erase(it);
-    else
+    } else {
       ++it;
+    }
   }
   QList<StorageDrive> drives;
   QList<StorageVolume> volumes;
@@ -187,8 +224,9 @@ void UDisks2Backend::publish(const StorageObjects& objects) {
       drive.optical = props.value(QStringLiteral("Optical")).toBool();
       drive.canEject = props.value(QStringLiteral("Ejectable")).toBool();
       drive.canPowerOff = props.value(QStringLiteral("CanPowerOff")).toBool();
-      if (props.contains(QStringLiteral("RotationRate")))
+      if (props.contains(QStringLiteral("RotationRate"))) {
         drive.rotationRate = props.value(QStringLiteral("RotationRate")).toInt();
+      }
       drives.append(drive);
     }
     if (interfaces.contains(blockInterface)) {
@@ -210,10 +248,11 @@ void UDisks2Backend::publish(const StorageObjects& objects) {
       volume.hintSystem = props.value(QStringLiteral("HintSystem")).toBool();
       volume.loop = interfaces.contains(QStringLiteral("org.freedesktop.UDisks2.Loop"));
       const auto tablePath = pathValue(interfaces.value(partitionInterface).value(QStringLiteral("Table")));
-      if (!tablePath.isEmpty())
+      if (!tablePath.isEmpty()) {
         volume.loop =
             volume.loop ||
             objects.value(QDBusObjectPath(tablePath)).contains(QStringLiteral("org.freedesktop.UDisks2.Loop"));
+      }
       const auto partition = interfaces.value(partitionInterface);
       volume.partitionType = partition.value(QStringLiteral("Type")).toString();
       volume.partitionName = partition.value(QStringLiteral("Name")).toString();
@@ -236,8 +275,8 @@ void UDisks2Backend::publish(const StorageObjects& objects) {
   // and loop hint.
   for (int pass = 0; pass < volumes.size(); ++pass) {
     bool changed = false;
-    for (auto& volume : volumes)
-      for (const auto& backing : volumes)
+    for (auto& volume : volumes) {
+      for (const auto& backing : volumes) {
         if (!volume.cryptoBackingId.isEmpty() && backing.id == volume.cryptoBackingId) {
           if (volume.driveId.isEmpty() && !backing.driveId.isEmpty()) {
             volume.driveId = backing.driveId;
@@ -248,18 +287,31 @@ void UDisks2Backend::publish(const StorageObjects& objects) {
             changed = true;
           }
         }
-    if (!changed) break;
+      }
+    }
+    if (!changed) {
+      break;
+    }
   }
   emit snapshotChanged(drives, volumes, true);
 }
+// The watcher is QObject-parented and deleteLater() is called on completion.
+// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 void UDisks2Backend::execute(const QString& requestId, StorageOperation operation, const QString& targetId) {
   const bool drive = operation == StorageOperation::Eject || operation == StorageOperation::PowerOff;
   const auto interface = drive ? driveInterface : blockInterface;
   QString path;
-  for (auto it = ids_.cbegin(); it != ids_.cend(); ++it)
-    if (it.value() == targetId && it.key().endsWith(QLatin1Char('#') + interface))
+  for (auto it = ids_.cbegin(); it != ids_.cend(); ++it) {
+    if (it.value() == targetId && it.key().endsWith(QLatin1Char('#') + interface)) {
       path = it.key().section(QLatin1Char('#'), 0, 0);
-  StorageResult result{requestId, targetId, operation, {}, {}, {}};
+    }
+  }
+  StorageResult result{.requestId = requestId,
+                       .targetId = targetId,
+                       .operation = operation,
+                       .mountPath = {},
+                       .errorName = {},
+                       .errorMessage = {}};
   if (path.isEmpty() || owner_.isEmpty()) {
     result.errorName = QStringLiteral("org.holonight.Storage.Disappeared");
     result.errorMessage = QStringLiteral("Storage target disappeared");
@@ -290,7 +342,9 @@ void UDisks2Backend::execute(const QString& requestId, StorageOperation operatio
           [this, generation, result](QDBusPendingCallWatcher* watcher) mutable {
             const auto reply = watcher->reply();
             watcher->deleteLater();
-            if (generation != generation_) return;
+            if (generation != generation_) {
+              return;
+            }
             if (reply.type() == QDBusMessage::ErrorMessage) {
               result.errorName = reply.errorName();
               result.errorMessage = reply.errorMessage();
@@ -307,4 +361,5 @@ void UDisks2Backend::execute(const QString& requestId, StorageOperation operatio
                         // its next step.
           });
 }
+// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 }  // namespace HoloNight::System

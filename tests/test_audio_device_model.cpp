@@ -69,7 +69,7 @@ TEST(AudioDeviceModel, ApplyAddUpdatesExistingRowByDeviceId) {
   EXPECT_EQ(model.rowCount(), 1);
   EXPECT_EQ(rows_inserted.count(), 0);
   EXPECT_EQ(data_changed.count(), 1);
-  const QList<int> changed_roles = data_changed.first().at(2).value<QList<int>>();
+  const auto changed_roles = data_changed.first().at(2).value<QList<int>>();
   EXPECT_EQ(changed_roles, (QList<int>{static_cast<int>(AudioDeviceModel::Role::Volume),
                                        static_cast<int>(AudioDeviceModel::Role::Muted),
                                        static_cast<int>(AudioDeviceModel::Role::IsDefault)}));
@@ -127,7 +127,7 @@ TEST(AudioDeviceModel, ApplyChangeEmitsDataChanged) {
 
   EXPECT_EQ(model.rowCount(), 1);
   EXPECT_EQ(data_changed.count(), 1);
-  const QList<int> changed_roles = data_changed.first().at(2).value<QList<int>>();
+  const auto changed_roles = data_changed.first().at(2).value<QList<int>>();
   EXPECT_EQ(changed_roles, QList<int>{static_cast<int>(AudioDeviceModel::Role::Volume)});
   const QModelIndex item = model.index(0);
   EXPECT_EQ(model.data(item, static_cast<int>(AudioDeviceModel::Role::Volume)).toUInt(), 80U);
