@@ -1,5 +1,7 @@
 # HoloNight System Services
 
+For current build, test, container acceptance and provider workflows, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
 Reusable Qt/C++ system integration for independent HoloNight applications. Consumers retain presentation,
 QML registration, translations, filtering and application policy.
 
@@ -10,9 +12,9 @@ QML registration, translations, filtering and application policy.
 ## Build and consume
 
 ```sh
-cmake -S . -B build/test -G Ninja -DBUILD_TESTS=ON
-cmake --build build/test
-ctest --test-dir build/test --output-on-failure
+cmake -S . -B build/dev -G Ninja -DBUILD_TESTS=ON
+cmake --build build/dev
+ctest --test-dir build/dev --output-on-failure
 ```
 
 Qt >=6.11 and a C++23 compiler are required. Components are enabled by default. Audio requires libpulse;
@@ -22,12 +24,7 @@ Qt Gui/WaylandClient and wayland-client. Disable every unwanted component explic
 Tests require Qt Test and installed GTest >=1.14 CONFIG with GTest/GMock targets. Storage tests additionally
 require `dbus-run-session`. No private Qt components or internal HoloNight providers are used.
 
-CMake is authoritative. `task configure`, `task build` and `task test` check installed prerequisites without
-downloading packages or preparing sources. Run `task deps PRESET=test` explicitly for preparation and
-prerequisite checks. Use `HOLONIGHT_EXTERNAL_PREFIX` for an installed external prefix (spaces are supported),
-or normal system package locations. Incompatible configured trees are preserved as `build/<preset>.previous-N`.
-Use `HOLONIGHT_BUILD_FEATURES="BUILD_AUDIO=OFF BUILD_STORAGE=ON BUILD_COMPOSITOR=OFF"` with Task
-to select features; direct CMake uses the corresponding `-D` options.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for current native and container commands.
 
 ```cmake
 find_package(HoloNightSystemServices REQUIRED COMPONENTS Storage)
@@ -83,31 +80,6 @@ The private backend uses the upstream [Drive API](https://storaged.org/udisks/do
 [Block API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Block.html) and
 [Partition API](https://storaged.org/udisks/docs/gdbus-org.freedesktop.UDisks2.Partition.html).
 See [the local SDD](docs/sdd/udisks2-storage/README.md) for acceptance evidence and pending ecosystem checks.
-
-## Standalone developer tooling
-
-See [tooling/README.md](tooling/README.md) for presets, local dependency overrides, editor refresh,
-`task tooling:doctor`, and the independent Serena project.
-
-
-## Local CI rehearsal
-
-Acquire the qualified immutable images explicitly with `task ci:prepare` (acquisition followed by acceptance),
-or `python3 scripts/ci/run.py --acquire-images --lane <lane>`. Subsequent `task ci` runs use
-`--pull=never --network=none`; absent images fail without acquisition. Docker is preferred, with Podman
-used when Docker is absent. The linux/amd64 images require an amd64 host or emulation.
-
-Clean acceptance covers full Debug tests and all install-tree consumers followed by full Release without tests,
-Audio only, Storage only, Compositor with and without Wayland, and Core only with all components/tests disabled.
-Core-only uses direct CMake and does not run CTest or editor refresh because it has no compilation database.
-The static lane runs format and full tidy checks. Licensing retains the separate immutable REUSE image.
-Storage backend tests retain their isolated D-Bus session. Every single-component install test also checks that
-requests for unavailable components fail.
-
-Tracked edits and non-ignored new files enter read-only snapshots; new inputs are reported to add before
-publication. Each lane builds in a disposable writable copy with a fresh tree. Rootless account mapping is
-preserved. Complete logs and exit statuses are written under `build/ci/`; any failed lane fails the command.
-See [the EDM-005 SDD](docs/sdd/external-dependency-management/SPEC.md) for verification and image identities.
 
 ## Compositor contract
 
