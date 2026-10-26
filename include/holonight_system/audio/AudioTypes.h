@@ -43,6 +43,8 @@ struct AudioStream {
   uint8_t volume{0};
   bool muted{false};
   AudioStreamType type{AudioStreamType::SinkInput};
+  QString application_id;
+  QString process_binary;
 };
 
 }  // namespace HoloNight::System

@@ -167,3 +167,19 @@ TEST(AudioStreamModel, RoleNamesAreCorrect) {
   EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::Muted)), "muted");
   EXPECT_EQ(roles.value(static_cast<int>(AudioStreamModel::Role::CurrentDevice)), "currentDevice");
 }
+
+TEST(AudioStreamModel, IdentityRolesAreAppendedAndUpdatedByUpserts) {
+  AudioStreamModel model;
+  auto stream = makeStream(7, "music");
+  EXPECT_EQ(static_cast<int>(AudioStreamModel::Role::CurrentDevice), Qt::UserRole + 7);
+  EXPECT_EQ(model.roleNames().value(Qt::UserRole + 8), "applicationId");
+  EXPECT_EQ(model.roleNames().value(Qt::UserRole + 9), "processBinary");
+  model.applyAdd(stream);
+  EXPECT_TRUE(model.data(model.index(0), Qt::UserRole + 8).toString().isEmpty());
+  stream.application_id = "org.browser";
+  stream.process_binary = "browser";
+  model.applyChange(stream);
+  EXPECT_EQ(model.rowCount(), 1);
+  EXPECT_EQ(model.data(model.index(0), Qt::UserRole + 8).toString(), "org.browser");
+  EXPECT_EQ(model.data(model.index(0), Qt::UserRole + 9).toString(), "browser");
+}

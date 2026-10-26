@@ -467,6 +467,8 @@ TEST(PulseAudioBackend, ParsesAndEmitsDevicesAndStreams) {
     stream.volume.values[1] = PA_VOLUME_NORM;
     stream.mute = 1;
     stream.proplist = pa_proplist_new();
+    pa_proplist_sets(stream.proplist, PA_PROP_APPLICATION_ID, "com.spotify.Client");
+    pa_proplist_sets(stream.proplist, PA_PROP_APPLICATION_PROCESS_BINARY, "spotify");
     pa_proplist_sets(stream.proplist, PA_PROP_APPLICATION_NAME, "Spotify");
     pa_proplist_sets(stream.proplist, PA_PROP_APPLICATION_ICON_NAME, "spotify-icon");
 
@@ -480,11 +482,33 @@ TEST(PulseAudioBackend, ParsesAndEmitsDevicesAndStreams) {
     EXPECT_EQ(ast.id, 12U);
     EXPECT_EQ(ast.name, QStringLiteral("Music App"));
     EXPECT_EQ(ast.application, QStringLiteral("Spotify"));
+    EXPECT_EQ(ast.application_id, "com.spotify.Client");
+    EXPECT_EQ(ast.process_binary, "spotify");
     EXPECT_EQ(ast.icon_name, QStringLiteral("spotify-icon"));
     EXPECT_EQ(ast.volume, 100);
     EXPECT_TRUE(ast.muted);
     EXPECT_EQ(ast.type, AudioStreamType::SinkInput);
 
+    ASSERT_NE(mock_sys.source_output_cb, nullptr);
+    pa_source_output_info recording{};
+    recording.index = 13;
+    recording.name = "Recording";
+    recording.volume = stream.volume;
+    recording.proplist = stream.proplist;
+    mock_sys.source_output_cb(mock_sys.mock_context, &recording, 0, mock_sys.source_output_userdata);
+    QCoreApplication::processEvents();
+    const auto captured = stream_added_spy.last().at(0).value<AudioStream>();
+    EXPECT_EQ(captured.application_id, "com.spotify.Client");
+    EXPECT_EQ(captured.process_binary, "spotify");
+    EXPECT_EQ(captured.type, AudioStreamType::SourceOutput);
+
+    pa_proplist_unset(stream.proplist, PA_PROP_APPLICATION_ID);
+    pa_proplist_unset(stream.proplist, PA_PROP_APPLICATION_PROCESS_BINARY);
+    mock_sys.sink_input_cb(mock_sys.mock_context, &stream, 0, mock_sys.sink_input_userdata);
+    QCoreApplication::processEvents();
+    const auto missing = stream_added_spy.last().at(0).value<AudioStream>();
+    EXPECT_TRUE(missing.application_id.isEmpty());
+    EXPECT_TRUE(missing.process_binary.isEmpty());
     pa_proplist_free(stream.proplist);
   }
 

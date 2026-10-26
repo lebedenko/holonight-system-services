@@ -22,6 +22,8 @@ class AudioStreamModel : public QAbstractListModel {
     Volume,
     Muted,
     CurrentDevice,
+    ApplicationId,
+    ProcessBinary,
   };
 
   explicit AudioStreamModel(QObject* parent = nullptr);

@@ -293,3 +293,16 @@ TEST(AudioController, ApplyInputLevelEmitsOnChangeAndSuppressesRepeat) {
   EXPECT_EQ(input_level_changed.count(), 1);
   EXPECT_EQ(input_level_changed.first().at(0).toInt(), 42);
 }
+
+TEST(AudioController, DisconnectionClearsPlaybackAndRecordingEvenWhenAlreadyUnavailable) {
+  AudioController controller(AudioController::SkipInit);
+  AudioStream stream;
+  stream.id = 1;
+  controller.onStreamAdded(stream);
+  stream.id = 2;
+  stream.type = AudioStreamType::SourceOutput;
+  controller.onStreamAdded(stream);
+  controller.setAvailable(false);
+  EXPECT_EQ(controller.playbackStreams()->rowCount(), 0);
+  EXPECT_EQ(controller.recordingStreams()->rowCount(), 0);
+}

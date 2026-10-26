@@ -29,6 +29,10 @@ QVariant AudioStreamModel::data(const QModelIndex& index, int role) const {
       return stream.volume;
     case Role::Muted:
       return stream.muted;
+    case Role::ApplicationId:
+      return stream.application_id;
+    case Role::ProcessBinary:
+      return stream.process_binary;
     case Role::CurrentDevice:
       return stream.device;
     default:
@@ -45,6 +49,8 @@ QHash<int, QByteArray> AudioStreamModel::roleNames() const {
       {static_cast<int>(Role::Volume), "volume"},
       {static_cast<int>(Role::Muted), "muted"},
       {static_cast<int>(Role::CurrentDevice), "currentDevice"},
+      {static_cast<int>(Role::ApplicationId), "applicationId"},
+      {static_cast<int>(Role::ProcessBinary), "processBinary"},
   };
   return kRoles;
 }

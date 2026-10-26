@@ -388,6 +388,10 @@ AudioStream PulseAudioBackend::Impl::sinkInputToStream(const pa_sink_input_info*
   AudioStream stream;
   stream.id = info->index;
   stream.name = QString::fromUtf8(info->name != nullptr ? info->name : "");
+  const char* app_id = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_ID);
+  stream.application_id = QString::fromUtf8(app_id != nullptr ? app_id : "");
+  const char* binary = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_PROCESS_BINARY);
+  stream.process_binary = QString::fromUtf8(binary != nullptr ? binary : "");
   const char* app_name = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_NAME);
   stream.application = QString::fromUtf8(app_name != nullptr ? app_name : "");
   const char* icon = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_ICON_NAME);
@@ -403,6 +407,10 @@ AudioStream PulseAudioBackend::Impl::sourceOutputToStream(const pa_source_output
   AudioStream stream;
   stream.id = info->index;
   stream.name = QString::fromUtf8(info->name != nullptr ? info->name : "");
+  const char* app_id = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_ID);
+  stream.application_id = QString::fromUtf8(app_id != nullptr ? app_id : "");
+  const char* binary = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_PROCESS_BINARY);
+  stream.process_binary = QString::fromUtf8(binary != nullptr ? binary : "");
   const char* app_name = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_NAME);
   stream.application = QString::fromUtf8(app_name != nullptr ? app_name : "");
   const char* icon = pa_proplist_gets(info->proplist, PA_PROP_APPLICATION_ICON_NAME);

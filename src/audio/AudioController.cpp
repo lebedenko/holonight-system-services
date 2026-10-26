@@ -182,6 +182,10 @@ void AudioController::applyInputLevel(int value) {
 }
 
 void AudioController::setAvailable(bool value) {
+  if (!value) {
+    playback_streams_->clear();
+    recording_streams_->clear();
+  }
   if (available_ == value) {
     return;
   }
