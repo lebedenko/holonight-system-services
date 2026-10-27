@@ -62,3 +62,18 @@ if(BUILD_COMPOSITOR)
       -DCOMPOSITOR_WAYLAND=${BUILD_COMPOSITOR_WAYLAND}
       -P ${CMAKE_CURRENT_SOURCE_DIR}/run_compositor_consumer.cmake)
 endif()
+
+if(BUILD_BLUETOOTH)
+  add_executable(bluetooth_agent_client bluetooth_agent_client.cpp)
+  target_include_directories(bluetooth_agent_client PRIVATE ${PROJECT_SOURCE_DIR}/src/bluetooth)
+  target_link_libraries(bluetooth_agent_client PRIVATE HoloNightSystem::Bluetooth Qt6::DBus)
+  add_executable(holonight_system_bluetooth_tests main.cpp test_bluetooth_controller.cpp test_bluez_backend.cpp)
+  add_dependencies(holonight_system_bluetooth_tests bluetooth_agent_client)
+  target_include_directories(holonight_system_bluetooth_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/bluetooth)
+  target_link_libraries(holonight_system_bluetooth_tests PRIVATE HoloNightSystem::Bluetooth Qt6::DBus Qt6::Test GTest::gtest GTest::gmock)
+  find_program(DBUS_RUN_SESSION dbus-run-session REQUIRED)
+  add_test(NAME holonight_system_bluetooth_tests COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:holonight_system_bluetooth_tests>)
+  add_test(NAME holonight_system_bluetooth_install_consumer COMMAND ${CMAKE_COMMAND}
+    -DPROVIDER_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DTEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/bluetooth-install-consumer
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/run_bluetooth_consumer.cmake)
+endif()

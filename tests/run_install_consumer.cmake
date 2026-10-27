@@ -2,7 +2,7 @@ file(REMOVE_RECURSE "${TEST_BINARY_DIR}")
 file(MAKE_DIRECTORY "${TEST_BINARY_DIR}/provider" "${TEST_BINARY_DIR}/prefix" "${TEST_BINARY_DIR}/consumer")
 
 execute_process(COMMAND ${CMAKE_COMMAND} -S "${PROVIDER_SOURCE_DIR}" -B "${TEST_BINARY_DIR}/provider"
-  -DBUILD_TESTS=OFF -DBUILD_COMPOSITOR=OFF -DBUILD_AUDIO=ON -DBUILD_STORAGE=OFF
+  -DBUILD_TESTS=OFF -DBUILD_BLUETOOTH=OFF -DBUILD_COMPOSITOR=OFF -DBUILD_AUDIO=ON -DBUILD_STORAGE=OFF
   -DCMAKE_INSTALL_PREFIX=${TEST_BINARY_DIR}/prefix RESULT_VARIABLE configure_result)
 if(NOT configure_result EQUAL 0)
   message(FATAL_ERROR "Provider configure failed")
@@ -29,5 +29,5 @@ if(NOT consumer_result EQUAL 0)
   message(FATAL_ERROR "Audio consumer run failed")
 endif()
 
-set(UNAVAILABLE_COMPONENTS Storage Compositor)
+set(UNAVAILABLE_COMPONENTS Bluetooth Storage Compositor)
 include("${CMAKE_CURRENT_LIST_DIR}/check_unavailable_components.cmake")

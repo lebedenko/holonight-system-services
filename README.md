@@ -90,3 +90,24 @@ Snapshot window identifiers are opaque. Window inventory retains native PID/app 
 Backend events and reconnects refresh snapshots, with concurrent refreshes coalesced. Disconnections publish unavailable snapshots.
 
 For compositor-only builds use `-DBUILD_AUDIO=OFF -DBUILD_STORAGE=OFF`. `-DBUILD_COMPOSITOR_WAYLAND=OFF` excludes generated Wayland protocol implementations while keeping the API and socket backends; unavailable explicit protocol backends report disconnected snapshots. Wayland implementations link directly to Qt Gui/WaylandClient and wayland-client, without a dependency on holonight-qt.
+
+## Bluetooth
+
+Use `find_package(HoloNightSystemServices REQUIRED COMPONENTS Bluetooth)` and link
+`HoloNightSystem::Bluetooth`. Build only this component with `BUILD_BLUETOOTH=ON`
+and `BUILD_AUDIO=OFF`, `BUILD_STORAGE=OFF`, `BUILD_COMPOSITOR=OFF`. Dependencies are
+Qt Core and Qt DBus; presentation belongs to the application.
+
+BlueZ must run on the system bus. Without it the controller exposes unavailable,
+empty models and recovers when the daemon appears. No adapter is powered on at
+startup, and power/rfkill/authorization errors are returned to the caller.
+Each application registers a KeyboardDisplay agent; only the shell should request
+default-agent status. If requesting that role fails, a diagnostic is emitted and
+application-initiated pairing still uses the application's own agent.
+
+Blueman can remain installed and running. Discovery sessions are shared by BlueZ;
+this client releases only sessions it acquired. Enabling discoverability writes a
+180-second timeout first. No host service or Blueman configuration is changed.
+See [the Bluetooth contract](docs/sdd/bluetooth/README.md) for lifetime and agent rules,
+and the upstream [Adapter API](https://raw.githubusercontent.com/bluez/bluez/master/doc/org.bluez.Adapter.rst)
+and [Agent API](https://bluez.readthedocs.io/en/latest/agent-api/).

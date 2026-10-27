@@ -91,6 +91,34 @@ if(BUILD_STORAGE)
     NAMESPACE HoloNightSystem:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HoloNightSystemServices)
 endif()
 
+option(BUILD_BLUETOOTH "Build the Bluetooth component" ON)
+if(BUILD_BLUETOOTH)
+  find_package(Qt6 6.11 REQUIRED COMPONENTS DBus)
+  add_library(holonight_system_bluetooth STATIC
+    include/holonight_system/bluetooth/BluetoothTypes.h
+    include/holonight_system/bluetooth/BluetoothBackend.h
+    include/holonight_system/bluetooth/BluetoothController.h
+    include/holonight_system/bluetooth/BluetoothAdapterModel.h
+    include/holonight_system/bluetooth/BluetoothDeviceModel.h
+    src/bluetooth/BluetoothController.cpp
+    src/bluetooth/BluetoothAdapterModel.cpp
+    src/bluetooth/BluetoothDeviceModel.cpp
+    src/bluetooth/BlueZBackend.cpp src/bluetooth/BlueZBackend.h
+    src/bluetooth/BlueZAgent.cpp src/bluetooth/BlueZAgent.h)
+  add_library(HoloNightSystem::Bluetooth ALIAS holonight_system_bluetooth)
+  set_target_properties(holonight_system_bluetooth PROPERTIES EXPORT_NAME Bluetooth)
+  target_include_directories(holonight_system_bluetooth PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/holonight_system/bluetooth>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/holonight_system/bluetooth>
+    PRIVATE src/bluetooth)
+  target_link_libraries(holonight_system_bluetooth PUBLIC Qt6::Core PRIVATE Qt6::DBus)
+  target_compile_features(holonight_system_bluetooth PUBLIC cxx_std_23)
+  install(TARGETS holonight_system_bluetooth EXPORT HoloNightSystemBluetoothTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(EXPORT HoloNightSystemBluetoothTargets FILE HoloNightSystemBluetoothTargets.cmake
+    NAMESPACE HoloNightSystem:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/HoloNightSystemServices)
+endif()
+
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if(BUILD_AUDIO)
   install(EXPORT HoloNightSystemAudioTargets

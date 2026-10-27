@@ -5,7 +5,7 @@ function(run)
   endif()
 endfunction()
 run(${CMAKE_COMMAND} -S "${PROVIDER_SOURCE_DIR}" -B "${TEST_BINARY_DIR}/provider" -G Ninja
-  -DBUILD_TESTS=OFF -DBUILD_AUDIO=OFF -DBUILD_STORAGE=OFF -DBUILD_COMPOSITOR=ON
+  -DBUILD_TESTS=OFF -DBUILD_BLUETOOTH=OFF -DBUILD_AUDIO=OFF -DBUILD_STORAGE=OFF -DBUILD_COMPOSITOR=ON
   -DBUILD_COMPOSITOR_WAYLAND=${COMPOSITOR_WAYLAND} -DCMAKE_INSTALL_PREFIX=${TEST_BINARY_DIR}/prefix)
 run(${CMAKE_COMMAND} --build "${TEST_BINARY_DIR}/provider" --parallel 4)
 run(${CMAKE_COMMAND} --install "${TEST_BINARY_DIR}/provider")
@@ -14,5 +14,5 @@ run(${CMAKE_COMMAND} -S "${CMAKE_CURRENT_LIST_DIR}/compositor-consumer" -B "${TE
 run(${CMAKE_COMMAND} --build "${TEST_BINARY_DIR}/consumer")
 run("${TEST_BINARY_DIR}/consumer/compositor-consumer")
 
-set(UNAVAILABLE_COMPONENTS Audio Storage)
+set(UNAVAILABLE_COMPONENTS Bluetooth Audio Storage)
 include("${CMAKE_CURRENT_LIST_DIR}/check_unavailable_components.cmake")
