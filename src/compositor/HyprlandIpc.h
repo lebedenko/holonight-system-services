@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QHash>
+#include <QJsonObject>
 #include <QList>
 #include <QSet>
 #include <QString>
@@ -26,6 +27,16 @@ struct HyprlandMonitorInfo {
   int active_workspace_id{0};
 };
 
+struct HyprlandWorkspaceReference {
+  QString address;
+  QString name;
+  QString type;
+  std::optional<int> id;
+  [[nodiscard]] bool isSpecial() const;
+  [[nodiscard]] QString identity() const;
+};
+[[nodiscard]] HyprlandWorkspaceReference parseHyprlandWorkspaceReference(const QJsonObject& object);
+
 struct HyprlandClientInfo {
   QString address;
   QString app_class;
@@ -33,6 +44,7 @@ struct HyprlandClientInfo {
   quint32 pid{0};
   int workspace_id{0};
   int focus_history_id{0};
+  HyprlandWorkspaceReference workspace;
 };
 
 struct HyprlandOpenWindow {

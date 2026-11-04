@@ -258,3 +258,21 @@ TEST(HyprlandIpc, WorkspaceIdForClientAddressJsonWarnsOnMalformedShape) {
   EXPECT_FALSE(
       workspaceIdForHyprlandClientAddressJson(QByteArrayLiteral("not json"), QStringLiteral("abc123")).has_value());
 }
+
+TEST(HyprlandIpc, WorkspaceReferencesPreserveAddressAndOptionalNumericSlot) {
+  const auto special = parseHyprlandWorkspaceReference(
+      QJsonObject{{"address", "special:magic"}, {"type", "special"}, {"name", "special:magic"}});
+  EXPECT_TRUE(special.isSpecial());
+  EXPECT_FALSE(special.id.has_value());
+  EXPECT_EQ(special.identity(), "address:special:magic");
+  const auto legacy = parseHyprlandWorkspaceReference(QJsonObject{{"id", -98}});
+  EXPECT_TRUE(legacy.isSpecial());
+  EXPECT_EQ(legacy.identity(), "id:-98");
+  EXPECT_TRUE(parseHyprlandWorkspaceReference(QJsonObject{}).identity().isEmpty());
+  EXPECT_TRUE(parseHyprlandWorkspaceReference(QJsonObject{{"id", 0}, {"name", ""}}).identity().isEmpty());
+  EXPECT_FALSE(parseHyprlandWorkspaceReference(QJsonObject{{"id", 1.5}}).id.has_value());
+  EXPECT_FALSE(parseHyprlandWorkspaceReference(QJsonObject{{"id", "1"}}).id.has_value());
+  const auto renamed = parseHyprlandWorkspaceReference(QJsonObject{{"id", 2}, {"name", "Development"}});
+  EXPECT_FALSE(renamed.isSpecial());
+  EXPECT_EQ(renamed.identity(), "id:2");
+}

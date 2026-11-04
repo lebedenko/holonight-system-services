@@ -354,3 +354,134 @@ TEST(HyprlandBackend, DisconnectClearsPrivateSpecialAndNumberedState) {
   finishRefresh(fake);
   EXPECT_TRUE(backend.numberedWorkspaces().eligible);
 }
+
+TEST(HyprlandBackend, AddressBasedSpecialWorkspacesRemainDistinctAcrossLifecycle) {
+  auto transport = std::make_unique<FakeHyprlandTransport>();
+  auto* fake = transport.get();
+  HyprlandBackend backend(std::move(transport));
+  QSignalSpy snapshots(&backend, &CompositorBackend::snapshotReady);
+  const QByteArray workspaces = R"([
+    {"address":"special:keymapp","type":"special","name":"special:keymapp"},
+    {"address":"special:magic","name":"special:magic"},
+    {"address":"1","id":1,"name":"Development"},
+    {"name":"malformed"},{"id":0,"name":"zero"},null
+  ])";
+  const QByteArray clients = R"([
+    {"address":"0xa","class":"keymapp","title":"Keyboard","workspace":{"address":"special:keymapp"}},
+    {"address":"0xb","class":"teams","title":"Meeting","workspace":{"name":"special:magic"}},
+    {"address":"0xc","class":"kitty","title":"Terminal","workspace":{"id":1}},
+    {"address":"0xd","class":"bad","title":"Empty reference","workspace":{}}
+  ])";
+  const auto refresh = [&](const QByteArray& monitors, const QByteArray& entries) {
+    fake->finish(monitors);
+    fake->finish(entries);
+    fake->finish(clients);
+  };
+  fake->connectStream();
+  processDeferred();
+  refresh(R"([{"name":"DP-1","focused":true,"activeWorkspace":{"address":"1"},
+                "specialWorkspace":{"address":"special:magic"}}])",
+          workspaces);
+  ASSERT_EQ(backend.specialWorkspaces().size(), 2);
+  for (const auto& value : backend.specialWorkspaces()) {
+    EXPECT_TRUE(value.toMap().value("occupied").toBool());
+    EXPECT_FALSE(value.toMap().value("urgent").toBool());
+  }
+  EXPECT_FALSE(backend.specialWorkspaces()[0].toMap().value("active").toBool());
+  EXPECT_TRUE(backend.specialWorkspaces()[1].toMap().value("active").toBool());
+  auto snapshot = qvariant_cast<CompositorSnapshot>(snapshots.last().first());
+  ASSERT_EQ(snapshot.workspaces.size(), 1);
+  EXPECT_EQ(snapshot.workspaces.first().id, "1");
+  EXPECT_EQ(snapshot.workspaces.first().display_name, "Development");
+  EXPECT_EQ(backend.numberedWorkspaces().assignments.value("1"), 1);
+  EXPECT_EQ(snapshot.active_windows.value("DP-1").title, "Meeting");
+
+  fake->sendEvent("activespecial>>special:magic,DP-2");
+  processDeferred();
+  refresh(R"([{"name":"DP-1","focused":true,"activeWorkspace":{"address":"1"},"specialWorkspace":{}},
+              {"name":"DP-2","specialWorkspace":{"address":"special:magic"}}])",
+          workspaces);
+  EXPECT_EQ(backend.specialWorkspaces()[1].toMap().value("monitorNames").toStringList(), QStringList{"DP-2"});
+  snapshot = qvariant_cast<CompositorSnapshot>(snapshots.last().first());
+  EXPECT_EQ(snapshot.active_windows.value("DP-1").title, "Terminal");
+  EXPECT_EQ(snapshot.active_windows.value("DP-2").title, "Meeting");
+
+  fake->sendEvent("activespecial>>,DP-2");
+  processDeferred();
+  refresh(R"([{"name":"DP-1","focused":true,"activeWorkspace":{"address":"1"},
+                "specialWorkspace":{"address":"","name":"","id":0}}])",
+          workspaces);
+  for (const auto& value : backend.specialWorkspaces()) {
+    EXPECT_FALSE(value.toMap().value("active").toBool());
+    EXPECT_TRUE(value.toMap().value("monitorNames").toStringList().isEmpty());
+  }
+
+  fake->sendEvent("destroyworkspace>>special:magic");
+  processDeferred();
+  refresh(R"([{"name":"DP-1","activeWorkspace":{"id":1}}])", R"([{"address":"1","id":1,"name":"Development"}])");
+  EXPECT_TRUE(backend.specialWorkspaces().isEmpty());
+  emit fake->eventStreamDisconnected();
+  EXPECT_FALSE(backend.numberedWorkspaces().eligible);
+  fake->connectStream();
+  processDeferred();
+  refresh(R"([{"name":"DP-1","activeWorkspace":{"id":1}}])", workspaces);
+  ASSERT_EQ(backend.specialWorkspaces().size(), 2);
+  EXPECT_EQ(backend.numberedWorkspaces().assignments.size(), 1);
+}
+
+TEST(HyprlandBackend, ResolvesLegacyIdOnlyReferencesToAddressedWorkspaces) {
+  auto transport = std::make_unique<FakeHyprlandTransport>();
+  auto* fake = transport.get();
+  HyprlandBackend backend(std::move(transport));
+  QSignalSpy snapshots(&backend, &CompositorBackend::snapshotReady);
+  fake->connectStream();
+  processDeferred();
+  fake->finish(R"([{"name":"DP-1","activeWorkspace":{"id":1},"specialWorkspace":{"id":-98}}])");
+  fake->finish(R"([{"address":"special:magic","id":-98,"name":"special:magic"},
+                    {"address":"1","id":1,"name":"Renamed"}])");
+  fake->finish(R"([{"address":"0xa","class":"app","title":"Special","workspace":{"id":-98}},
+                    {"address":"0xb","class":"app","title":"Normal","workspace":{"id":1}}])");
+  ASSERT_EQ(backend.specialWorkspaces().size(), 1);
+  const auto special = backend.specialWorkspaces().first().toMap();
+  EXPECT_TRUE(special.value("active").toBool());
+  EXPECT_TRUE(special.value("occupied").toBool());
+  EXPECT_EQ(qvariant_cast<CompositorSnapshot>(snapshots.last().first()).active_windows.value("DP-1").title, "Special");
+}
+
+TEST(HyprlandBackend, EscapesQuotedSpecialNameInLuaFallback) {
+  auto transport = std::make_unique<FakeHyprlandTransport>();
+  auto* fake = transport.get();
+  HyprlandBackend backend(std::move(transport));
+  fake->connectStream();
+  processDeferred();
+  fake->finish("[]");
+  fake->finish(R"([{"address":"special:a\"b","type":"special","name":"special:a\"b"}])");
+  fake->finish("[]");
+  backend.activateSpecialWorkspace(QStringLiteral("special:a\"b"));
+  EXPECT_EQ(fake->commands.last(), "dispatch togglespecialworkspace a\"b");
+  fake->finish("error: unsupported dispatcher");
+  EXPECT_EQ(fake->commands.last(), "dispatch hl.dsp.workspace.toggle_special(\"a\\\"b\")");
+}
+
+TEST(HyprlandBackend, EmptyAndUnknownReferencesDoNotOccupySpecialWorkspaces) {
+  auto transport = std::make_unique<FakeHyprlandTransport>();
+  auto* fake = transport.get();
+  HyprlandBackend backend(std::move(transport));
+  fake->connectStream();
+  processDeferred();
+  fake->finish(R"([{"name":"DP-1","activeWorkspace":{},"specialWorkspace":{"address":"","name":""}}])");
+  fake->finish(R"([{"address":"special:keymapp","name":"special:keymapp"},
+                    {"address":"special:magic","name":"special:magic"},
+                    {"id":0,"name":"bad"},{"id":1.5,"name":"fractional"}])");
+  fake->finish(R"([{"address":"0xa","class":"app","title":"Empty","workspace":{}},
+                    {"address":"0xb","class":"app","title":"Zero","workspace":{"id":0}},
+                    {"address":"0xc","class":"app","title":"Unknown","workspace":{"address":"unknown","name":"special:magic"}},
+                    {"address":"0xd","class":"app","title":"Keyboard","workspace":{"address":"special:keymapp"}}])");
+  ASSERT_EQ(backend.specialWorkspaces().size(), 2);
+  EXPECT_TRUE(backend.specialWorkspaces()[0].toMap().value("occupied").toBool());
+  EXPECT_FALSE(backend.specialWorkspaces()[1].toMap().value("occupied").toBool());
+  for (const auto& value : backend.specialWorkspaces()) {
+    EXPECT_FALSE(value.toMap().value("active").toBool());
+  }
+  EXPECT_TRUE(backend.numberedWorkspaces().assignments.isEmpty());
+}

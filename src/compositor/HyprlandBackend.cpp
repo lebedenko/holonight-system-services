@@ -27,68 +27,115 @@ bool addressMatches(const QSet<QString>& urgent_addresses, const QString& addres
       urgent_addresses, [&address](const QString& urgent) { return address.endsWith(urgent, Qt::CaseInsensitive); });
 }
 
-void collectMonitors(const QJsonArray& monitors, CompositorSnapshot* snapshot, QHash<int, QString>* outputs,
-                     QSet<int>* active_workspaces) {
+class WorkspaceIndex {
+ public:
+  explicit WorkspaceIndex(const QJsonArray& workspaces) {
+    for (const auto value : workspaces) {
+      const auto reference = parseHyprlandWorkspaceReference(value.toObject());
+      const QString identity = reference.identity();
+      if (identity.isEmpty() || reference.name.isEmpty() ||
+          (!reference.isSpecial() && (!reference.id || *reference.id <= 0))) {
+        continue;
+      }
+      identities_.insert(identity);
+      if (reference.id && *reference.id != 0) {
+        ids_.insert(*reference.id, identity);
+      }
+      if (reference.isSpecial()) {
+        names_.insert(reference.name, identity);
+      }
+    }
+  }
+  QString resolve(const HyprlandWorkspaceReference& reference) const {
+    if (!reference.address.isEmpty()) {
+      const QString identity = reference.identity();
+      return identities_.contains(identity) ? identity : QString{};
+    }
+    if (reference.isSpecial() && names_.contains(reference.name)) {
+      return names_.value(reference.name);
+    }
+    return reference.id ? ids_.value(*reference.id) : QString{};
+  }
+
+ private:
+  QSet<QString> identities_;
+  QHash<int, QString> ids_;
+  QHash<QString, QString> names_;
+};
+
+void collectMonitors(const QJsonArray& monitors, const WorkspaceIndex& index, QSet<QString>* special_outputs,
+                     CompositorSnapshot* snapshot, QHash<QString, QString>* outputs, QSet<QString>* active_workspaces) {
   for (const auto value : monitors) {
     const QJsonObject monitor = value.toObject();
     const QString output = monitor.value(QStringLiteral("name")).toString();
-    const auto collect_active = [&output, outputs, active_workspaces](const QJsonObject& workspace) {
-      const int workspace_id = workspace.value(QStringLiteral("id")).toInt();
-      if (!output.isEmpty() && workspace_id != 0) {
+    const auto collect_active = [&output, &index, outputs, active_workspaces](const QJsonObject& workspace) {
+      const auto reference = parseHyprlandWorkspaceReference(workspace);
+      const QString workspace_id = index.resolve(reference);
+      if (!output.isEmpty() && !workspace_id.isEmpty()) {
         outputs->insert(workspace_id, output);
         active_workspaces->insert(workspace_id);
       }
     };
     collect_active(monitor.value(QStringLiteral("activeWorkspace")).toObject());
-    collect_active(monitor.value(QStringLiteral("specialWorkspace")).toObject());
+    const auto special = monitor.value(QStringLiteral("specialWorkspace")).toObject();
+    collect_active(special);
+    if (!index.resolve(parseHyprlandWorkspaceReference(special)).isEmpty()) {
+      special_outputs->insert(output);
+    }
     if (monitor.value(QStringLiteral("focused")).toBool(false)) {
       snapshot->focused_output = output;
     }
   }
 }
 
-void collectClients(const QList<HyprlandClientInfo>& clients, QHash<int, int>* window_counts,
-                    QHash<int, HyprlandClientInfo>* focused_clients) {
+void collectClients(const QList<HyprlandClientInfo>& clients, const WorkspaceIndex& index,
+                    QHash<QString, int>* window_counts, QHash<QString, HyprlandClientInfo>* focused_clients) {
   for (const HyprlandClientInfo& client : clients) {
     if (client.app_class.isEmpty() || client.title.isEmpty()) {
       continue;
     }
-    ++(*window_counts)[client.workspace_id];
-    if (!focused_clients->contains(client.workspace_id) ||
-        client.focus_history_id < focused_clients->value(client.workspace_id).focus_history_id) {
-      focused_clients->insert(client.workspace_id, client);
+    const QString identity = index.resolve(client.workspace);
+    if (identity.isEmpty()) {
+      continue;
+    }
+    ++(*window_counts)[identity];
+    if (!focused_clients->contains(identity) ||
+        client.focus_history_id < focused_clients->value(identity).focus_history_id) {
+      focused_clients->insert(identity, client);
     }
   }
 }
 
-void appendWorkspaces(const QJsonArray& workspaces, const QList<HyprlandClientInfo>& clients,
-                      const QHash<int, QString>& workspace_outputs, const QSet<int>& active_workspaces,
-                      const QHash<int, int>& window_counts, const QHash<int, HyprlandClientInfo>& focused_clients,
-                      QSet<QString>* urgent_addresses, CompositorSnapshot* snapshot, NumberedWorkspaceState* numbered,
-                      QVariantList* specials) {
+void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index, const QSet<QString>& special_outputs,
+                      const QList<HyprlandClientInfo>& clients, const QHash<QString, QString>& workspace_outputs,
+                      const QSet<QString>& active_workspaces, const QHash<QString, int>& window_counts,
+                      const QHash<QString, HyprlandClientInfo>& focused_clients, QSet<QString>* urgent_addresses,
+                      CompositorSnapshot* snapshot, NumberedWorkspaceState* numbered, QVariantList* specials) {
   int order = 0;
   for (const auto value : workspaces) {
     const QJsonObject workspace = value.toObject();
-    const int workspace_id = workspace.value(QStringLiteral("id")).toInt();
+    const auto reference = parseHyprlandWorkspaceReference(workspace);
+    const QString workspace_id = index.resolve(reference);
     const QString name = workspace.value(QStringLiteral("name")).toString();
-    if (workspace_id == 0 || name.isEmpty()) {
+    if (workspace_id.isEmpty() || name.isEmpty() || (!reference.isSpecial() && (!reference.id || *reference.id <= 0))) {
       continue;
     }
-    const bool special = workspace_id < 0 || name.startsWith(QStringLiteral("special:"));
+    const bool special = reference.isSpecial();
     const bool active = active_workspaces.contains(workspace_id);
-    const bool urgent =
-        !special && std::ranges::any_of(clients, [urgent_addresses, workspace_id](const HyprlandClientInfo& client) {
-          return client.workspace_id == workspace_id && addressMatches(*urgent_addresses, client.address);
-        });
+    const bool urgent = !special && std::ranges::any_of(clients, [urgent_addresses, workspace_id,
+                                                                  &index](const HyprlandClientInfo& client) {
+      return index.resolve(client.workspace) == workspace_id && addressMatches(*urgent_addresses, client.address);
+    });
     if (active) {
-      urgent_addresses->removeIf([&clients, workspace_id](const QString& address) {
-        return std::ranges::any_of(clients, [&address, workspace_id](const HyprlandClientInfo& client) {
-          return client.workspace_id == workspace_id && client.address.endsWith(address, Qt::CaseInsensitive);
+      urgent_addresses->removeIf([&clients, workspace_id, &index](const QString& address) {
+        return std::ranges::any_of(clients, [&address, workspace_id, &index](const HyprlandClientInfo& client) {
+          return index.resolve(client.workspace) == workspace_id &&
+                 client.address.endsWith(address, Qt::CaseInsensitive);
         });
       });
     }
     CompositorWorkspace entry{
-        .id = special ? name : QString::number(workspace_id),
+        .id = special ? name : QString::number(*reference.id),
         .display_name = name,
         .stable_order = order++,
         .outputs = workspace_outputs.contains(workspace_id) ? QStringList{workspace_outputs.value(workspace_id)}
@@ -113,10 +160,11 @@ void appendWorkspaces(const QJsonArray& workspaces, const QList<HyprlandClientIn
           {QStringLiteral("monitorNames"), entry.outputs},
       });
     } else {
-      numbered->assignments.insert(entry.id, workspace_id);
+      numbered->assignments.insert(entry.id, *reference.id);
       snapshot->workspaces.append(std::move(entry));
     }
-    if (active && focused_clients.contains(workspace_id)) {
+    if (active && focused_clients.contains(workspace_id) &&
+        (special || !special_outputs.contains(workspace_outputs.value(workspace_id)))) {
       const HyprlandClientInfo& client = focused_clients[workspace_id];
       snapshot->active_windows.insert(workspace_outputs.value(workspace_id),
                                       {.app_id = client.app_class, .title = client.title});
@@ -336,16 +384,18 @@ void HyprlandBackend::publishClients(const QByteArray& clients_json) {
               .occupancy = true,
           },
   };
-  QHash<int, QString> workspace_outputs;
-  QSet<int> active_workspaces;
-  collectMonitors(monitors.array(), &snapshot, &workspace_outputs, &active_workspaces);
-  QHash<int, int> window_counts;
-  QHash<int, HyprlandClientInfo> focused_clients;
-  collectClients(*clients, &window_counts, &focused_clients);
+  const WorkspaceIndex index(workspaces.array());
+  QSet<QString> special_outputs;
+  QHash<QString, QString> workspace_outputs;
+  QSet<QString> active_workspaces;
+  collectMonitors(monitors.array(), index, &special_outputs, &snapshot, &workspace_outputs, &active_workspaces);
+  QHash<QString, int> window_counts;
+  QHash<QString, HyprlandClientInfo> focused_clients;
+  collectClients(*clients, index, &window_counts, &focused_clients);
   numbered_ = {.eligible = true};
   special_workspaces_.clear();
-  appendWorkspaces(workspaces.array(), *clients, workspace_outputs, active_workspaces, window_counts, focused_clients,
-                   &urgent_addresses_, &snapshot, &numbered_, &special_workspaces_);
+  appendWorkspaces(workspaces.array(), index, special_outputs, *clients, workspace_outputs, active_workspaces,
+                   window_counts, focused_clients, &urgent_addresses_, &snapshot, &numbered_, &special_workspaces_);
   emit specialWorkspacesChanged();
   QList<WindowActivationCandidate> activation_candidates;
   QList<QString> activation_addresses;

@@ -13,6 +13,32 @@
 
 Q_LOGGING_CATEGORY(lcHyprlandIpc, "holonight.hyprland.ipc")
 
+bool HyprlandWorkspaceReference::isSpecial() const {
+  return type == QStringLiteral("special") || name.startsWith(QStringLiteral("special:")) || (id && *id < 0);
+}
+QString HyprlandWorkspaceReference::identity() const {
+  if (!address.isEmpty()) {
+    return QStringLiteral("address:") + address;
+  }
+  if (isSpecial() && !name.isEmpty()) {
+    return QStringLiteral("name:") + name;
+  }
+  return id && *id != 0 ? QStringLiteral("id:") + QString::number(*id) : QString{};
+}
+HyprlandWorkspaceReference parseHyprlandWorkspaceReference(const QJsonObject& object) {
+  HyprlandWorkspaceReference result{
+      .address = object.value(QStringLiteral("address")).toString(),
+      .name = object.value(QStringLiteral("name")).toString(),
+      .type = object.value(QStringLiteral("type")).toString(),
+  };
+  const QJsonValue id = object.value(QStringLiteral("id"));
+  if (id.isDouble() && id.toDouble() >= std::numeric_limits<int>::min() &&
+      id.toDouble() <= std::numeric_limits<int>::max() && std::floor(id.toDouble()) == id.toDouble()) {
+    result.id = id.toInt();
+  }
+  return result;
+}
+
 std::optional<HyprlandActiveWindow> parseHyprlandActiveWindowEvent(const QByteArray& line) {
   constexpr QByteArrayView kPrefix{"activewindow>>"};
   if (!line.startsWith(kPrefix)) {
@@ -239,6 +265,7 @@ std::optional<QList<HyprlandClientInfo>> parseHyprlandClientsJson(const QByteArr
         .pid = pid,
         .workspace_id = ws_id,
         .focus_history_id = focus_id,
+        .workspace = parseHyprlandWorkspaceReference(obj.value(QStringLiteral("workspace")).toObject()),
     });
   }
   return result;
