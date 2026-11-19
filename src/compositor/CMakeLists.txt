@@ -3,7 +3,7 @@ file(GLOB public_headers CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/holoni
 add_library(holonight_system_compositor STATIC ${public_headers}
   CompositorFactory.cpp WindowActivation.cpp HyprlandBackend.cpp HyprlandBackend.h
   HyprlandIpc.cpp HyprlandIpc.h HyprlandIpcClient.cpp HyprlandIpcClient.h
-  SwayBackend.cpp SwayBackend.h SwayIpc.cpp SwayIpc.h)
+  SwayBackend.cpp SwayBackend.h SwayIpc.cpp SwayIpc.h SwayInputObserver.cpp)
 add_library(HoloNightSystem::Compositor ALIAS holonight_system_compositor)
 target_compile_features(holonight_system_compositor PUBLIC cxx_std_23)
 set_target_properties(holonight_system_compositor PROPERTIES EXPORT_NAME Compositor POSITION_INDEPENDENT_CODE ON)
