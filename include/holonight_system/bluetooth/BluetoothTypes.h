@@ -12,7 +12,9 @@ struct BluetoothAdapter {
   bool operator==(const BluetoothAdapter&) const = default;
 };
 struct BluetoothDevice {
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   QString id, adapterId, address, addressType, name, alias, icon;
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   quint32 deviceClass = 0;
   quint16 appearance = 0;
   bool paired = false, bonded = false, trusted = false, blocked = false, connected = false;
@@ -20,6 +22,8 @@ struct BluetoothDevice {
   QStringList uuids;
   bool operator==(const BluetoothDevice&) const = default;
 };
+// Keep the existing enum representation stable for consumers.
+// NOLINTNEXTLINE(performance-enum-size)
 enum class BluetoothOperation {
   Power,
   AdapterAlias,
@@ -33,14 +37,18 @@ enum class BluetoothOperation {
   DeviceAlias,
   Trust,
   Block,
-  Forget
+  Forget,
 };
 struct BluetoothResult {
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   QString requestId, targetId;
   BluetoothOperation operation = BluetoothOperation::Connect;
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   QString errorName, errorMessage;
-  bool succeeded() const { return errorName.isEmpty(); }
+  [[nodiscard]] bool succeeded() const { return errorName.isEmpty(); }
 };
+// Keep the existing enum representation stable for consumers.
+// NOLINTNEXTLINE(performance-enum-size)
 enum class BluetoothInteraction {
   PinEntry,
   PinDisplay,
@@ -48,11 +56,13 @@ enum class BluetoothInteraction {
   PasskeyDisplay,
   Confirmation,
   PairingAuthorization,
-  ServiceAuthorization
+  ServiceAuthorization,
 };
 struct BluetoothAgentRequest {
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   QString requestId, deviceId;
   BluetoothInteraction interaction = BluetoothInteraction::Confirmation;
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   QString code, serviceUuid;
   quint16 entered = 0;
 };

@@ -33,7 +33,8 @@ class FakeUDisks : public QDBusVirtualObject {
   explicit FakeUDisks(QDBusConnection connection) : bus(std::move(connection)) {
     objects[QDBusObjectPath(drivePath)][driveInterface] = {
         {"Vendor", "Test"},       {"Model", "External SSD"}, {"Removable", true},  {"MediaRemovable", false},
-        {"MediaAvailable", true}, {"CanPowerOff", true},     {"Ejectable", false}, {"SiblingId", "usb"}};
+        {"MediaAvailable", true}, {"CanPowerOff", true},     {"Ejectable", false}, {"SiblingId", "usb"},
+    };
     objects[QDBusObjectPath(volumePath)][blockInterface] = {
         {"Drive", QVariant::fromValue(QDBusObjectPath(drivePath))},
         {"IdUsage", "filesystem"},
@@ -42,7 +43,8 @@ class FakeUDisks : public QDBusVirtualObject {
         {"Size", QVariant::fromValue(static_cast<quint64>(4000000000ULL))},
         {"HintSystem", true},
         {"HintIgnore", false},
-        {"PreferredDevice", QByteArray("/dev/sdb1\0", 10)}};
+        {"PreferredDevice", QByteArray("/dev/sdb1\0", 10)},
+    };
     objects[QDBusObjectPath(volumePath)][fsInterface] = {{"MountPoints", QVariant::fromValue(QList<QByteArray>{})}};
   }
   [[nodiscard]] QString introspect(const QString& /*path*/) const override { return {}; }
@@ -325,7 +327,8 @@ TEST_F(UDisksTest, LockedAndUnlockedStorageKeepFullBackingTopology) {
   fake.objects[QDBusObjectPath(volumePath)].remove(fsInterface);
   fake.objects[QDBusObjectPath(volumePath)][blockInterface]["IdUsage"] = "crypto";
   fake.objects[QDBusObjectPath(volumePath)][encrypted] = {
-      {"CleartextDevice", QVariant::fromValue(QDBusObjectPath("/"))}};
+      {"CleartextDevice", QVariant::fromValue(QDBusObjectPath("/"))},
+  };
   UDisks2Backend backend(QDBusConnection::sessionBus(), service);
   StorageController c(&backend);
   ASSERT_TRUE(QTest::qWaitFor([&] { return c.available(); }));
@@ -337,7 +340,8 @@ TEST_F(UDisksTest, LockedAndUnlockedStorageKeepFullBackingTopology) {
   fake.objects[QDBusObjectPath(clearPath)][blockInterface] = {
       {"Drive", QVariant::fromValue(QDBusObjectPath("/"))},
       {"IdUsage", "filesystem"},
-      {"CryptoBackingDevice", QVariant::fromValue(QDBusObjectPath(volumePath))}};
+      {"CryptoBackingDevice", QVariant::fromValue(QDBusObjectPath(volumePath))},
+  };
   fake.objects[QDBusObjectPath(clearPath)][fsInterface] = {{"MountPoints", QVariant::fromValue(QList<QByteArray>{})}};
   fake.changed();
   ASSERT_TRUE(QTest::qWaitFor([&] { return c.volumes()->rowCount() == 2; }));

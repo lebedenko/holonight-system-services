@@ -19,20 +19,29 @@ class BlueZAgent final : public QObject, protected QDBusContext {
   void setDeviceResolver(std::function<QString(const QString&)> resolver) { resolver_ = std::move(resolver); }
   void setOwner(const QString& owner);
   void setDevices(const QHash<QString, QString>& devices);
-  void respond(const QString& id, bool accept, const QString& input);
+  void respond(const QString& requestId, bool accept, const QString& input);
   void clear();
  signals:
   void requested(BluetoothAgentRequest request);
   void canceled(QString requestId);
  public slots:
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void Release();
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   QString RequestPinCode(const QDBusObjectPath& device);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void DisplayPinCode(const QDBusObjectPath& device, const QString& pin);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   quint32 RequestPasskey(const QDBusObjectPath& device);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void DisplayPasskey(const QDBusObjectPath& device, quint32 passkey, quint16 entered);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void RequestConfirmation(const QDBusObjectPath& device, quint32 passkey);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void RequestAuthorization(const QDBusObjectPath& device);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void AuthorizeService(const QDBusObjectPath& device, const QString& uuid);
+  // NOLINTNEXTLINE(readability-identifier-naming)  // Published API spelling.
   void Cancel();
 
  private:
@@ -42,7 +51,7 @@ class BlueZAgent final : public QObject, protected QDBusContext {
   struct Pending {
     BluetoothAgentRequest request;
     QDBusMessage message;
-    bool delayed;
+    bool delayed = false;
   };
   QDBusConnection connection_;
   QString owner_;

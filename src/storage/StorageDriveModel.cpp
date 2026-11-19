@@ -46,21 +46,23 @@ QVariant StorageDriveModel::data(const QModelIndex& index, int role) const {
   }
 }
 QHash<int, QByteArray> StorageDriveModel::roleNames() const {
-  return {{IdRole, "id"},
-          {VendorRole, "vendor"},
-          {ModelRole, "model"},
-          {SerialRole, "serial"},
-          {ConnectionBusRole, "connectionBus"},
-          {SiblingIdRole, "siblingId"},
-          {RemovableRole, "removable"},
-          {MediaRemovableRole, "mediaRemovable"},
-          {MediaPresentRole, "mediaPresent"},
-          {OpticalRole, "optical"},
-          {CanEjectRole, "canEject"},
-          {CanPowerOffRole, "canPowerOff"},
-          {MediaRole, "media"},
-          {MediaCompatibilityRole, "mediaCompatibility"},
-          {RotationRateRole, "rotationRate"}};
+  return {
+      {IdRole, "id"},
+      {VendorRole, "vendor"},
+      {ModelRole, "model"},
+      {SerialRole, "serial"},
+      {ConnectionBusRole, "connectionBus"},
+      {SiblingIdRole, "siblingId"},
+      {RemovableRole, "removable"},
+      {MediaRemovableRole, "mediaRemovable"},
+      {MediaPresentRole, "mediaPresent"},
+      {OpticalRole, "optical"},
+      {CanEjectRole, "canEject"},
+      {CanPowerOffRole, "canPowerOff"},
+      {MediaRole, "media"},
+      {MediaCompatibilityRole, "mediaCompatibility"},
+      {RotationRateRole, "rotationRate"},
+  };
 }
 std::optional<StorageDrive> StorageDriveModel::find(const QString& identifier) const {
   for (const auto& item : items_) {

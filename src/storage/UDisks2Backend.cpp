@@ -306,12 +306,14 @@ void UDisks2Backend::execute(const QString& requestId, StorageOperation operatio
       path = it.key().section(QLatin1Char('#'), 0, 0);
     }
   }
-  StorageResult result{.requestId = requestId,
-                       .targetId = targetId,
-                       .operation = operation,
-                       .mountPath = {},
-                       .errorName = {},
-                       .errorMessage = {}};
+  StorageResult result{
+      .requestId = requestId,
+      .targetId = targetId,
+      .operation = operation,
+      .mountPath = {},
+      .errorName = {},
+      .errorMessage = {},
+  };
   if (path.isEmpty() || owner_.isEmpty()) {
     result.errorName = QStringLiteral("org.holonight.Storage.Disappeared");
     result.errorMessage = QStringLiteral("Storage target disappeared");

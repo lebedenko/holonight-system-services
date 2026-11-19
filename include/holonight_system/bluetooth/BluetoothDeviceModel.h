@@ -7,6 +7,8 @@ class BluetoothDeviceModel : public QAbstractListModel {
   Q_OBJECT
  public:
   using QAbstractListModel::QAbstractListModel;
+  // Qt role constants retain their class scope and representation for consumers.
+  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class,performance-enum-size)
   enum Role {
     IdRole = Qt::UserRole + 1,
     AdapterIdRole = Qt::UserRole + 2,
@@ -24,14 +26,16 @@ class BluetoothDeviceModel : public QAbstractListModel {
     ConnectedRole = Qt::UserRole + 14,
     RssiRole = Qt::UserRole + 15,
     BatteryRole = Qt::UserRole + 16,
-    UuidsRole = Qt::UserRole + 17
+    UuidsRole = Qt::UserRole + 17,
   };
-  int rowCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : items_.size(); }
-  QVariant data(const QModelIndex& index, int role) const override;
-  QHash<int, QByteArray> roleNames() const override;
+  [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override {
+    return parent.isValid() ? 0 : static_cast<int>(items_.size());
+  }
+  [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
+  [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
   void apply(const QList<BluetoothDevice>& items);
-  const QList<BluetoothDevice>& items() const { return items_; }
-  std::optional<BluetoothDevice> find(const QString& id) const;
+  [[nodiscard]] const QList<BluetoothDevice>& items() const { return items_; }
+  [[nodiscard]] std::optional<BluetoothDevice> find(const QString& identifier) const;
 
  private:
   QList<BluetoothDevice> items_;

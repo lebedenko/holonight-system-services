@@ -60,28 +60,30 @@ QVariant StorageVolumeModel::data(const QModelIndex& index, int role) const {
   }
 }
 QHash<int, QByteArray> StorageVolumeModel::roleNames() const {
-  return {{IdRole, "id"},
-          {DriveIdRole, "driveId"},
-          {LabelRole, "label"},
-          {DeviceRole, "device"},
-          {FilesystemTypeRole, "filesystemType"},
-          {UsageRole, "usage"},
-          {PartitionTypeRole, "partitionType"},
-          {CryptoBackingIdRole, "cryptoBackingId"},
-          {MountPointsRole, "mountPoints"},
-          {CapacityRole, "capacity"},
-          {HintIgnoreRole, "hintIgnore"},
-          {HintSystemRole, "hintSystem"},
-          {LoopRole, "loop"},
-          {PartitionContainerRole, "partitionContainer"},
-          {LockedRole, "locked"},
-          {CanMountRole, "canMount"},
-          {CanUnmountRole, "canUnmount"},
-          {PartitionNameRole, "partitionName"},
-          {PartitionNumberRole, "partitionNumber"},
-          {HintNameRole, "hintName"},
-          {HintIconNameRole, "hintIconName"},
-          {HintSymbolicIconNameRole, "hintSymbolicIconName"}};
+  return {
+      {IdRole, "id"},
+      {DriveIdRole, "driveId"},
+      {LabelRole, "label"},
+      {DeviceRole, "device"},
+      {FilesystemTypeRole, "filesystemType"},
+      {UsageRole, "usage"},
+      {PartitionTypeRole, "partitionType"},
+      {CryptoBackingIdRole, "cryptoBackingId"},
+      {MountPointsRole, "mountPoints"},
+      {CapacityRole, "capacity"},
+      {HintIgnoreRole, "hintIgnore"},
+      {HintSystemRole, "hintSystem"},
+      {LoopRole, "loop"},
+      {PartitionContainerRole, "partitionContainer"},
+      {LockedRole, "locked"},
+      {CanMountRole, "canMount"},
+      {CanUnmountRole, "canUnmount"},
+      {PartitionNameRole, "partitionName"},
+      {PartitionNumberRole, "partitionNumber"},
+      {HintNameRole, "hintName"},
+      {HintIconNameRole, "hintIconName"},
+      {HintSymbolicIconNameRole, "hintSymbolicIconName"},
+  };
 }
 std::optional<StorageVolume> StorageVolumeModel::find(const QString& identifier) const {
   for (const auto& item : items_) {

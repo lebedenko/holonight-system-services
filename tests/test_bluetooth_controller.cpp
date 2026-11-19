@@ -12,13 +12,16 @@ class FakeBluetooth : public BluetoothBackend {
   QList<BluetoothResult> calls;
   bool stopped = false;
   void start() override {
-    emit snapshotChanged({{"adapter", "AA", "Computer", true}}, {{.id = "device", .adapterId = "adapter"}}, true);
+    emit snapshotChanged({{.id = "adapter", .address = "AA", .alias = "Computer", .powered = true}},
+                         {{.id = "device", .adapterId = "adapter"}}, true);
   }
   void stop() override { stopped = true; }
-  void execute(const QString& request, BluetoothOperation operation, const QString& target, const QVariant&) override {
-    calls.append({request, target, operation, {}, {}});
+  void execute(const QString& request, BluetoothOperation operation, const QString& target,
+               const QVariant& /*value*/) override {
+    calls.append(
+        {.requestId = request, .targetId = target, .operation = operation, .errorName = {}, .errorMessage = {}});
   }
-  void respond(const QString&, bool, const QString&) override {}
+  void respond(const QString& /*requestId*/, bool /*accept*/, const QString& /*input*/) override {}
   void requestDefaultAgent() override {}
 };
 }  // namespace

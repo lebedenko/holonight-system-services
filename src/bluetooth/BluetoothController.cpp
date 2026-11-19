@@ -4,6 +4,8 @@
 
 #include <QTimer>
 #include <QUuid>
+
+#include <algorithm>
 namespace HoloNight::System {
 BluetoothController::BluetoothController(QObject* parent) : BluetoothController(new BlueZBackend, parent) {
   backend_->setParent(this);
@@ -37,29 +39,41 @@ BluetoothController::BluetoothController(BluetoothBackend* backend, QObject* par
 }
 BluetoothController::~BluetoothController() { backend_->stop(); }
 bool BluetoothController::busy(const QString& targetId) const {
-  for (const auto& request : pending_)
-    if (request.targetId == targetId && request.errorName.isEmpty()) return true;
-  return false;
+  return std::ranges::any_of(pending_, [&targetId](const auto& request) {
+    return request.targetId == targetId && request.errorName.isEmpty();
+  });
 }
 QString BluetoothController::execute(BluetoothOperation operation, const QString& targetId, const QVariant& value) {
-  BluetoothResult result{QUuid::createUuid().toString(QUuid::WithoutBraces), targetId, operation, {}, {}};
-  if (!available_ || (!adapters_.find(targetId) && !devices_.find(targetId)))
+  BluetoothResult result{
+      .requestId = QUuid::createUuid().toString(QUuid::WithoutBraces),
+      .targetId = targetId,
+      .operation = operation,
+      .errorName = {},
+      .errorMessage = {},
+  };
+  if (!available_ || (!adapters_.find(targetId) && !devices_.find(targetId))) {
     result.errorName = QStringLiteral("org.holonight.Bluetooth.Unavailable");
-  else if (busy(targetId) && operation != BluetoothOperation::CancelPairing)
+  } else if (busy(targetId) && operation != BluetoothOperation::CancelPairing) {
     result.errorName = QStringLiteral("org.holonight.Bluetooth.Busy");
+  }
   pending_.insert(result.requestId, result);
   emit operationStateChanged();
   QTimer::singleShot(0, this, [this, result, value] {
-    if (!pending_.contains(result.requestId)) return;
-    if (!result.errorName.isEmpty())
+    if (!pending_.contains(result.requestId)) {
+      return;
+    }
+    if (!result.errorName.isEmpty()) {
       finish(result);
-    else
+    } else {
       backend_->execute(result.requestId, result.operation, result.targetId, value);
+    }
   });
   return result.requestId;
 }
-void BluetoothController::finish(BluetoothResult result) {
-  if (!pending_.remove(result.requestId)) return;
+void BluetoothController::finish(const BluetoothResult& result) {
+  if (!pending_.remove(result.requestId)) {
+    return;
+  }
   emit operationStateChanged();
   emit operationFinished(result);
 }

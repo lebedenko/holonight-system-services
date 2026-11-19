@@ -46,7 +46,7 @@ class WorkspaceIndex {
       }
     }
   }
-  QString resolve(const HyprlandWorkspaceReference& reference) const {
+  [[nodiscard]] QString resolve(const HyprlandWorkspaceReference& reference) const {
     if (!reference.address.isEmpty()) {
       const QString identity = reference.identity();
       return identities_.contains(identity) ? identity : QString{};
@@ -106,6 +106,20 @@ void collectClients(const QList<HyprlandClientInfo>& clients, const WorkspaceInd
   }
 }
 
+void clearActiveWorkspaceUrgency(const QList<HyprlandClientInfo>& clients, const QString& workspace_id,
+                                 const WorkspaceIndex& index, QSet<QString>* urgent_addresses) {
+  urgent_addresses->removeIf([&clients, workspace_id, &index](const QString& address) {
+    return std::ranges::any_of(clients, [&address, workspace_id, &index](const HyprlandClientInfo& client) {
+      return index.resolve(client.workspace) == workspace_id && client.address.endsWith(address, Qt::CaseInsensitive);
+    });
+  });
+}
+
+[[nodiscard]] bool validWorkspace(const HyprlandWorkspaceReference& reference, const QString& workspace_id,
+                                  const QString& name) {
+  return !workspace_id.isEmpty() && !name.isEmpty() && (reference.isSpecial() || (reference.id && *reference.id > 0));
+}
+
 void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index, const QSet<QString>& special_outputs,
                       const QList<HyprlandClientInfo>& clients, const QHash<QString, QString>& workspace_outputs,
                       const QSet<QString>& active_workspaces, const QHash<QString, int>& window_counts,
@@ -117,7 +131,7 @@ void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index,
     const auto reference = parseHyprlandWorkspaceReference(workspace);
     const QString workspace_id = index.resolve(reference);
     const QString name = workspace.value(QStringLiteral("name")).toString();
-    if (workspace_id.isEmpty() || name.isEmpty() || (!reference.isSpecial() && (!reference.id || *reference.id <= 0))) {
+    if (!validWorkspace(reference, workspace_id, name)) {
       continue;
     }
     const bool special = reference.isSpecial();
@@ -127,12 +141,7 @@ void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index,
       return index.resolve(client.workspace) == workspace_id && addressMatches(*urgent_addresses, client.address);
     });
     if (active) {
-      urgent_addresses->removeIf([&clients, workspace_id, &index](const QString& address) {
-        return std::ranges::any_of(clients, [&address, workspace_id, &index](const HyprlandClientInfo& client) {
-          return index.resolve(client.workspace) == workspace_id &&
-                 client.address.endsWith(address, Qt::CaseInsensitive);
-        });
-      });
+      clearActiveWorkspaceUrgency(clients, workspace_id, index, urgent_addresses);
     }
     CompositorWorkspace entry{
         .id = special ? name : QString::number(*reference.id),

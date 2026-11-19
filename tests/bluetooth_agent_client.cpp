@@ -11,5 +11,5 @@ int main(int argc, char** argv) {
                    [&controller](const BluetoothAgentRequest& request) {
                      controller.respond(request.requestId, true, QStringLiteral("000042"));
                    });
-  return app.exec();
+  return QCoreApplication::exec();
 }

@@ -31,10 +31,11 @@ HyprlandWorkspaceReference parseHyprlandWorkspaceReference(const QJsonObject& ob
       .name = object.value(QStringLiteral("name")).toString(),
       .type = object.value(QStringLiteral("type")).toString(),
   };
-  const QJsonValue id = object.value(QStringLiteral("id"));
-  if (id.isDouble() && id.toDouble() >= std::numeric_limits<int>::min() &&
-      id.toDouble() <= std::numeric_limits<int>::max() && std::floor(id.toDouble()) == id.toDouble()) {
-    result.id = id.toInt();
+  const QJsonValue identifier = object.value(QStringLiteral("id"));
+  if (identifier.isDouble() && identifier.toDouble() >= std::numeric_limits<int>::min() &&
+      identifier.toDouble() <= std::numeric_limits<int>::max() &&
+      std::floor(identifier.toDouble()) == identifier.toDouble()) {
+    result.id = identifier.toInt();
   }
   return result;
 }

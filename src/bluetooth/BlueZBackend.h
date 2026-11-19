@@ -5,6 +5,7 @@
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
+#include <QDBusPendingCallWatcher>
 #include <QHash>
 #include <QMap>
 #include <QSet>
@@ -14,10 +15,11 @@ using BluetoothInterfaces = QMap<QString, QVariantMap>;
 using BluetoothObjects = QMap<QDBusObjectPath, BluetoothInterfaces>;
 class BlueZBackend final : public BluetoothBackend {
   Q_OBJECT
+  Q_DISABLE_COPY_MOVE(BlueZBackend)
  public:
   explicit BlueZBackend(QObject* parent = nullptr);
   ~BlueZBackend() override { stop(); }
-  BlueZBackend(QDBusConnection connection, QString service, QObject* parent = nullptr);
+  BlueZBackend(const QDBusConnection& connection, QString service, QObject* parent = nullptr);
   void start() override;
   void stop() override;
   void execute(const QString& requestId, BluetoothOperation operation, const QString& targetId,
@@ -32,6 +34,11 @@ class BlueZBackend final : public BluetoothBackend {
                          const QDBusMessage& message);
 
  private:
+  void completeOperation(QDBusPendingCallWatcher* watcher, quint64 generation, const QString& path,
+                         BluetoothResult result, bool discovery);
+  void setDiscoverable(quint64 generation, const QString& requestId, const QString& targetId, const QVariant& value);
+  void setDiscoverableTimeout(quint64 generation, const QString& requestId, const QString& targetId,
+                              const QString& path, const QVariant& value);
   void setOwner(const QString& owner);
   void changed();
   void refresh();

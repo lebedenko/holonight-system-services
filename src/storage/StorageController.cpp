@@ -101,12 +101,14 @@ QString StorageController::begin(StorageOperation operation, const QString& targ
                                  const QStringList& confirmedScope) {
   const QString identifier = freshId();
   Request request;
-  request.result = {.requestId = identifier,
-                    .targetId = targetId,
-                    .operation = operation,
-                    .mountPath = {},
-                    .errorName = {},
-                    .errorMessage = {}};
+  request.result = {
+      .requestId = identifier,
+      .targetId = targetId,
+      .operation = operation,
+      .mountPath = {},
+      .errorName = {},
+      .errorMessage = {},
+  };
   QString failure;
   if (!available_) {
     failure = QStringLiteral("Unavailable");

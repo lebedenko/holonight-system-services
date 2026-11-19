@@ -27,7 +27,7 @@ class StorageDriveModel : public QAbstractListModel {
     CanPowerOffRole,
     MediaRole,
     MediaCompatibilityRole,
-    RotationRateRole
+    RotationRateRole,
   };
   [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
   [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;

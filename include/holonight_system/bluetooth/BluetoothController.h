@@ -7,18 +7,19 @@
 namespace HoloNight::System {
 class BluetoothController : public QObject {
   Q_OBJECT
+  Q_DISABLE_COPY_MOVE(BluetoothController)
   Q_PROPERTY(bool available READ available NOTIFY availableChanged)
  public:
   explicit BluetoothController(QObject* parent = nullptr);
   // Injected backend must outlive this controller.
   explicit BluetoothController(BluetoothBackend* backend, QObject* parent = nullptr);
   ~BluetoothController() override;
-  bool available() const { return available_; }
+  [[nodiscard]] bool available() const { return available_; }
   BluetoothAdapterModel* adapters() { return &adapters_; }
   BluetoothDeviceModel* devices() { return &devices_; }
-  const BluetoothAdapterModel* adapters() const { return &adapters_; }
-  const BluetoothDeviceModel* devices() const { return &devices_; }
-  bool busy(const QString& targetId) const;
+  [[nodiscard]] const BluetoothAdapterModel* adapters() const { return &adapters_; }
+  [[nodiscard]] const BluetoothDeviceModel* devices() const { return &devices_; }
+  [[nodiscard]] bool busy(const QString& targetId) const;
   QString execute(BluetoothOperation operation, const QString& targetId, const QVariant& value = {});
   void respond(const QString& requestId, bool accept, const QString& input = {});
   void requestDefaultAgent();
@@ -31,7 +32,7 @@ class BluetoothController : public QObject {
   void diagnostic(QString errorName, QString errorMessage);
 
  private:
-  void finish(BluetoothResult result);
+  void finish(const BluetoothResult& result);
   BluetoothBackend* backend_;
   BluetoothAdapterModel adapters_;
   BluetoothDeviceModel devices_;
