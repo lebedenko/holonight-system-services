@@ -25,5 +25,6 @@ struct CompositorWindow {
   quint32 pid{0};
   std::optional<QString> workspace_id;
   std::optional<QRectF> layout_rect;
+  std::optional<QString> foreign_toplevel_identifier;
   bool operator==(const CompositorWindow&) const = default;
 };
