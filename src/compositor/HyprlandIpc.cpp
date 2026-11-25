@@ -14,7 +14,8 @@
 Q_LOGGING_CATEGORY(lcHyprlandIpc, "holonight.hyprland.ipc")
 
 bool HyprlandWorkspaceReference::isSpecial() const {
-  return type == QStringLiteral("special") || name.startsWith(QStringLiteral("special:")) || (id && *id < 0);
+  return type == QStringLiteral("special") || name.startsWith(QStringLiteral("special:")) ||
+         name == QStringLiteral("special") || (name.isEmpty() && id && *id < 0);
 }
 QString HyprlandWorkspaceReference::identity() const {
   if (!address.isEmpty()) {
@@ -254,11 +255,18 @@ std::optional<QList<HyprlandClientInfo>> parseHyprlandClientsJson(const QByteArr
         pid = static_cast<quint32>(parsed_pid);
       }
     }
-    if ((app_class.isEmpty() || title.isEmpty()) && (pid == 0 || address.isEmpty())) {
+    if (address.isEmpty() && (app_class.isEmpty() || title.isEmpty())) {
       continue;
     }
     const int ws_id = obj.value(QStringLiteral("workspace")).toObject().value(QStringLiteral("id")).toInt(0);
     const int focus_id = obj.value(QStringLiteral("focusHistoryID")).toInt(std::numeric_limits<int>::max());
+    const auto position = obj.value(QStringLiteral("at")).toArray();
+    const auto size = obj.value(QStringLiteral("size")).toArray();
+    std::optional<QRectF> rect;
+    if (position.size() == 2 && size.size() == 2 && position[0].isDouble() && position[1].isDouble() &&
+        size[0].toDouble() > 0 && size[1].toDouble() > 0) {
+      rect.emplace(position[0].toDouble(), position[1].toDouble(), size[0].toDouble(), size[1].toDouble());
+    }
     result.append(HyprlandClientInfo{
         .address = address,
         .app_class = app_class,
@@ -267,6 +275,7 @@ std::optional<QList<HyprlandClientInfo>> parseHyprlandClientsJson(const QByteArr
         .workspace_id = ws_id,
         .focus_history_id = focus_id,
         .workspace = parseHyprlandWorkspaceReference(obj.value(QStringLiteral("workspace")).toObject()),
+        .layout_rect = rect,
     });
   }
   return result;

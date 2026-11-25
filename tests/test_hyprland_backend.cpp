@@ -485,3 +485,32 @@ TEST(HyprlandBackend, EmptyAndUnknownReferencesDoNotOccupySpecialWorkspaces) {
   }
   EXPECT_TRUE(backend.numberedWorkspaces().assignments.isEmpty());
 }
+
+TEST(HyprlandBackend, PublishesLayoutAndActivatesSameTitleByAddress) {
+  auto transport = std::make_unique<FakeHyprlandTransport>();
+  auto* fake = transport.get();
+  HyprlandBackend backend(std::move(transport));
+  QSignalSpy snapshots(&backend, &CompositorBackend::snapshotReady);
+  fake->connectStream();
+  processDeferred();
+  fake->finish(R"([{"name":"DP-2","focused":true,"activeWorkspace":{"id":-1337}}])");
+  fake->finish(R"([{"id":-1337,"name":"Dev","monitor":"DP-2"},{"id":12,"name":"12","monitor":"DP-1"}])");
+  fake->finish(R"([
+    {"address":"0x1","class":"app","title":"Same","workspace":{"id":-1337},"at":[-100,12.5],"size":[120,60]},
+    {"address":"0x2","class":"app","title":"Same","workspace":{"id":12},"at":[0,0],"size":[0,60]}
+  ])");
+
+  ASSERT_EQ(snapshots.count(), 1);
+  const auto snapshot = qvariant_cast<CompositorSnapshot>(snapshots.first().first());
+  EXPECT_TRUE(snapshot.capabilities.window_listing);
+  EXPECT_TRUE(snapshot.capabilities.window_workspace_membership);
+  EXPECT_FALSE(backend.numberedWorkspaces().eligible);
+  ASSERT_EQ(snapshot.windows.size(), 2);
+  EXPECT_EQ(snapshot.windows[0].workspace_id, QStringLiteral("-1337"));
+  EXPECT_EQ(snapshot.windows[0].layout_rect, QRectF(-100, 12.5, 120, 60));
+  EXPECT_EQ(snapshot.windows[1].workspace_id, QStringLiteral("12"));
+  EXPECT_FALSE(snapshot.windows[1].layout_rect);
+  EXPECT_EQ(backend.requestWindowCommand("0x3", WindowCommand::Activate), WindowCommandResult::InvalidWindow);
+  EXPECT_EQ(backend.requestWindowCommand("0x2", WindowCommand::Activate), WindowCommandResult::Accepted);
+  EXPECT_EQ(fake->commands.last(), QByteArrayLiteral("dispatch focuswindow address:0x2"));
+}

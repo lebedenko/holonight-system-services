@@ -258,6 +258,11 @@ void LabwcBackend::publish() {
   }
   auto snapshot = mergeLabwcSnapshot(workspace_snapshot_, available_, windows);
   snapshot.capabilities.window_listing = available_;
+  // Foreign toplevels identify the focused output only when the active window is wholly on one output.
+  if (windows.size() == 1) {
+    snapshot.focused_output = windows.constBegin().key();
+    snapshot.capabilities.focused_output = true;
+  }
   snapshot.windows = std::move(inventory);
   emit snapshotReady(snapshot);
 }

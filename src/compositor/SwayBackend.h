@@ -4,6 +4,7 @@
 #include "SwayIpc.h"
 
 #include <QLocalSocket>
+#include <QSet>
 #include <QTimer>
 
 #include <cstdint>
@@ -18,6 +19,7 @@ class SwayBackend final : public CompositorBackend, public NumberedWorkspaceProv
   [[nodiscard]] NumberedWorkspaceState numberedWorkspaces() const override { return numbered_; }
   void activateNumberedSlot(int slot) override;
   void activateWorkspace(const QString& workspace_id) override;
+  WindowCommandResult requestWindowCommand(const QString& identifier, WindowCommand command) override;
   [[nodiscard]] WindowActivationResult requestWindowActivation(const WindowActivationRequest& request) override;
 
  private:
@@ -63,9 +65,15 @@ class SwayBackend final : public CompositorBackend, public NumberedWorkspaceProv
   QByteArray workspaces_;
   QByteArray outputs_;
   std::optional<WorkspaceActivation> pending_activation_;
+  WindowCommandResult activateWindow(quint64 container_id, bool revalidate);
+  QSet<QString> window_ids_;
   QList<WindowActivationCandidate> activation_candidates_;
   QList<quint64> activation_container_ids_;
-  std::optional<quint64> pending_window_container_id_;
+  struct PendingWindow {
+    quint64 id;
+    bool revalidate;
+  };
+  std::optional<PendingWindow> pending_window_container_id_;
   bool refresh_dirty_{false};
   bool subscription_ready_{false};
   int reconnect_delay_ms_{1000};

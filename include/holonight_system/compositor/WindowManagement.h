@@ -1,13 +1,16 @@
 #pragma once
 
 #include <QList>
+#include <QRectF>
 #include <QString>
 #include <QStringList>
+
+#include <optional>
 
 // NOLINTNEXTLINE(performance-enum-size): Preserve plugin ABI.
 enum class WindowCommand { Activate, Minimize, Restore, Maximize, Unmaximize, Fullscreen, Unfullscreen, Close };
 // NOLINTNEXTLINE(performance-enum-size): Preserve plugin ABI.
-enum class WindowCommandResult { Accepted, InvalidWindow, Unsupported, Disconnected, MissingSeat };
+enum class WindowCommandResult { Accepted, InvalidWindow, Unsupported, Disconnected, MissingSeat, Busy, Failed };
 
 struct CompositorWindow {
   QString id;
@@ -20,5 +23,7 @@ struct CompositorWindow {
   bool fullscreen{false};
   QList<WindowCommand> operations;
   quint32 pid{0};
+  std::optional<QString> workspace_id;
+  std::optional<QRectF> layout_rect;
   bool operator==(const CompositorWindow&) const = default;
 };

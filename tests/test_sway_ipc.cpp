@@ -124,3 +124,27 @@ TEST(SwayNumberedProvider, RejectsNoncanonicalNamesZeroAndDuplicateNumbers) {
   ASSERT_TRUE(empty);
   EXPECT_TRUE(empty->numbered.eligible);
 }
+
+TEST(SwayIpc, ProjectsWorkspaceMembershipAndOptionalGeometryForAppWindows) {
+  const auto snapshot = parseSwaySnapshot(
+      R"([{"id":21,"num":1,"name":"1","output":"DP-1"},{"id":22,"num":2,"name":"2","output":"DP-2"}])", "[]",
+      R"({"type":"root","nodes":[
+        {"type":"output","name":"DP-1","nodes":[{"type":"workspace","name":"1","layout":"tabbed","nodes":[
+          {"type":"con","id":101,"shell":"xdg_shell","name":"Same","app_id":"app",
+           "rect":{"x":-900,"y":25,"width":400,"height":300},"nodes":[],"floating_nodes":[]}
+        ]}]},
+        {"type":"output","name":"DP-2","nodes":[{"type":"workspace","name":"2","floating_nodes":[
+          {"type":"con","id":102,"shell":"xwayland","name":"Same","window_properties":{"class":"XApp"},
+           "rect":{"width":400,"height":0},"nodes":[],"floating_nodes":[]}
+        ]}]}
+      ]})");
+
+  ASSERT_TRUE(snapshot);
+  ASSERT_EQ(snapshot->windows.size(), 2);
+  EXPECT_EQ(snapshot->windows[0].workspace_id, QStringLiteral("21"));
+  EXPECT_EQ(snapshot->windows[0].layout_rect, QRectF(-900, 25, 400, 300));
+  EXPECT_EQ(snapshot->windows[1].id, QStringLiteral("102"));
+  EXPECT_EQ(snapshot->windows[1].workspace_id, QStringLiteral("22"));
+  EXPECT_EQ(snapshot->windows[1].app_id, QStringLiteral("XApp"));
+  EXPECT_FALSE(snapshot->windows[1].layout_rect);
+}

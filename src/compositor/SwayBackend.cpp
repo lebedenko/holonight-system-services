@@ -183,6 +183,10 @@ void SwayBackend::finishRefresh(const QByteArray& tree) {
       activation_candidates_.append(window.candidate);
       activation_container_ids_.append(window.container_id);
     }
+    window_ids_.clear();
+    for (const auto& window : refresh->snapshot.windows) {
+      window_ids_.insert(window.id);
+    }
     refresh->snapshot.capabilities.window_activation = true;
     emit snapshotReady(std::move(refresh->snapshot));
   } else {
@@ -215,19 +219,40 @@ WindowActivationResult SwayBackend::requestWindowActivation(const WindowActivati
     return resolution.result;
   }
   const quint64 container_id = activation_container_ids_.at(*resolution.candidate_index);
+  switch (activateWindow(container_id, false)) {
+    case WindowCommandResult::Accepted:
+      return WindowActivationResult::Accepted;
+    case WindowCommandResult::Busy:
+      return WindowActivationResult::Busy;
+    default:
+      return WindowActivationResult::Failed;
+  }
+}
+
+WindowCommandResult SwayBackend::requestWindowCommand(const QString& identifier, WindowCommand command) {
+  if (command != WindowCommand::Activate) {
+    return WindowCommandResult::Unsupported;
+  }
+  if (!window_ids_.contains(identifier)) {
+    return WindowCommandResult::InvalidWindow;
+  }
+  return activateWindow(identifier.toULongLong(), true);
+}
+
+WindowCommandResult SwayBackend::activateWindow(quint64 container_id, bool revalidate) {
   if (phase_ != RequestPhase::Idle) {
     if (pending_window_container_id_) {
-      return WindowActivationResult::Busy;
+      return WindowCommandResult::Busy;
     }
-    pending_window_container_id_ = container_id;
-    return WindowActivationResult::Accepted;
+    pending_window_container_id_ = PendingWindow{.id = container_id, .revalidate = revalidate};
+    return WindowCommandResult::Accepted;
   }
   if (!beginWindowActivation(container_id)) {
     fail(QStringLiteral("Sway window activation transport failed"));
     scheduleRefresh();
-    return WindowActivationResult::Failed;
+    return WindowCommandResult::Failed;
   }
-  return WindowActivationResult::Accepted;
+  return WindowCommandResult::Accepted;
 }
 
 bool SwayBackend::beginWindowActivation(quint64 container_id) {
@@ -246,13 +271,15 @@ void SwayBackend::drainWork() {
     return;
   }
   if (pending_window_container_id_) {
-    const quint64 container_id = std::exchange(pending_window_container_id_, std::nullopt).value();
-    if (!beginWindowActivation(container_id)) {
+    const auto target = std::exchange(pending_window_container_id_, std::nullopt).value();
+    if ((!target.revalidate || window_ids_.contains(QString::number(target.id))) && !beginWindowActivation(target.id)) {
       fail(QStringLiteral("Sway window activation transport failed"));
       refresh_dirty_ = true;
       scheduleRefresh();
     }
-    return;
+    if (phase_ != RequestPhase::Idle) {
+      return;
+    }
   }
   if (pending_activation_) {
     const auto activation = std::exchange(pending_activation_, std::nullopt).value();
@@ -294,6 +321,7 @@ void SwayBackend::handleSubscriptionData() {
 void SwayBackend::fail(const QString& diagnostic) {
   numbered_ = {};
   workspace_names_.clear();
+  window_ids_.clear();
   emit snapshotReady({.connected = false, .diagnostic = diagnostic});
 }
 

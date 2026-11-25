@@ -34,7 +34,7 @@ class WorkspaceIndex {
       const auto reference = parseHyprlandWorkspaceReference(value.toObject());
       const QString identity = reference.identity();
       if (identity.isEmpty() || reference.name.isEmpty() ||
-          (!reference.isSpecial() && (!reference.id || *reference.id <= 0))) {
+          (!reference.isSpecial() && (!reference.id || *reference.id == 0))) {
         continue;
       }
       identities_.insert(identity);
@@ -117,7 +117,7 @@ void clearActiveWorkspaceUrgency(const QList<HyprlandClientInfo>& clients, const
 
 [[nodiscard]] bool validWorkspace(const HyprlandWorkspaceReference& reference, const QString& workspace_id,
                                   const QString& name) {
-  return !workspace_id.isEmpty() && !name.isEmpty() && (reference.isSpecial() || (reference.id && *reference.id > 0));
+  return !workspace_id.isEmpty() && !name.isEmpty() && (reference.isSpecial() || (reference.id && *reference.id != 0));
 }
 
 void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index, const QSet<QString>& special_outputs,
@@ -136,6 +136,7 @@ void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index,
     }
     const bool special = reference.isSpecial();
     const bool active = active_workspaces.contains(workspace_id);
+    const QString output = workspace_outputs.value(workspace_id, workspace.value(QStringLiteral("monitor")).toString());
     const bool urgent = !special && std::ranges::any_of(clients, [urgent_addresses, workspace_id,
                                                                   &index](const HyprlandClientInfo& client) {
       return index.resolve(client.workspace) == workspace_id && addressMatches(*urgent_addresses, client.address);
@@ -147,8 +148,7 @@ void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index,
         .id = special ? name : QString::number(*reference.id),
         .display_name = name,
         .stable_order = order++,
-        .outputs = workspace_outputs.contains(workspace_id) ? QStringList{workspace_outputs.value(workspace_id)}
-                                                            : QStringList{},
+        .outputs = output.isEmpty() ? QStringList{} : QStringList{output},
         .active = active,
         .focused = active && workspace_outputs.value(workspace_id) == snapshot->focused_output,
         .urgent = urgent,
@@ -160,6 +160,7 @@ void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index,
       }
     }
     if (special) {
+      snapshot->special_workspaces.append(entry);
       specials->append(QVariantMap{
           {QStringLiteral("id"), entry.id},
           {QStringLiteral("name"), entry.display_name},
@@ -169,7 +170,12 @@ void appendWorkspaces(const QJsonArray& workspaces, const WorkspaceIndex& index,
           {QStringLiteral("monitorNames"), entry.outputs},
       });
     } else {
-      numbered->assignments.insert(entry.id, *reference.id);
+      if (*reference.id > 0) {
+        numbered->assignments.insert(entry.id, *reference.id);
+      }
+      if (*reference.id <= 0 || name != QString::number(*reference.id)) {
+        numbered->eligible = false;
+      }
       snapshot->workspaces.append(std::move(entry));
     }
     if (active && focused_clients.contains(workspace_id) &&
@@ -188,6 +194,8 @@ HyprlandBackend::HyprlandBackend(HyprlandIpcTransportPtr transport, QObject* par
                            : std::make_unique<HyprlandIpcClient>(QStringLiteral("CompositorService:"))) {
   connect(this, &CompositorBackend::snapshotReady, this, [this](const CompositorSnapshot& snapshot) {
     if (!snapshot.connected) {
+      window_ids_.clear();
+      workspace_selectors_.clear();
       numbered_ = {};
       special_workspaces_.clear();
       emit specialWorkspacesChanged();
@@ -316,13 +324,15 @@ void HyprlandBackend::drainWork() {
     return;
   }
   if (pending_window_address_) {
-    const QString address = std::exchange(pending_window_address_, std::nullopt).value();
-    if (!beginWindowActivation(address)) {
+    const auto target = std::exchange(pending_window_address_, std::nullopt).value();
+    if ((!target.revalidate || window_ids_.contains(target.id)) && !beginWindowActivation(target.id)) {
       emit snapshotReady({.diagnostic = QStringLiteral("Hyprland window activation transport failed")});
       refresh_dirty_ = true;
       scheduleRefresh();
     }
-    return;
+    if (phase_ != Phase::Idle) {
+      return;
+    }
   }
   if (!pending_activation_.isEmpty()) {
     const QString activation = std::exchange(pending_activation_, {});
@@ -359,13 +369,16 @@ void HyprlandBackend::runLuaActivation() {
   QByteArray command;
   QString diagnostic;
   if (activation_is_special_) {
-    const QString name = activation_id_.sliced(QStringLiteral("special:").size());
+    const QString name = activation_id_.mid(QStringLiteral("special:").size());
     command = QByteArrayLiteral("dispatch hl.dsp.workspace.toggle_special(\"") + escapeLuaString(name) +
               QByteArrayLiteral("\")");
     diagnostic = QStringLiteral("Hyprland Lua special workspace activation failed");
   } else {
-    command =
-        QByteArrayLiteral("dispatch hl.dsp.focus({ workspace = ") + activation_id_.toUtf8() + QByteArrayLiteral(" })");
+    const QByteArray selector =
+        activation_id_.startsWith(QStringLiteral("name:"))
+            ? QByteArrayLiteral("\"") + escapeLuaString(activation_id_) + QByteArrayLiteral("\"")
+            : activation_id_.toUtf8();
+    command = QByteArrayLiteral("dispatch hl.dsp.focus({ workspace = ") + selector + QByteArrayLiteral(" })");
     diagnostic = QStringLiteral("Hyprland Lua workspace activation failed");
   }
   if (!transport_->runCommand(command)) {
@@ -385,12 +398,14 @@ void HyprlandBackend::publishClients(const QByteArray& clients_json) {
       .connected = true,
       .capabilities =
           {
+              .window_listing = true,
               .workspace_listing = true,
               .workspace_activation = true,
               .active_window = true,
               .focused_output = true,
               .urgency = true,
               .occupancy = true,
+              .window_workspace_membership = true,
           },
   };
   const WorkspaceIndex index(workspaces.array());
@@ -408,14 +423,47 @@ void HyprlandBackend::publishClients(const QByteArray& clients_json) {
   emit specialWorkspacesChanged();
   QList<WindowActivationCandidate> activation_candidates;
   QList<QString> activation_addresses;
+  window_ids_.clear();
+  QHash<QString, QString> workspace_ids;
+  workspace_selectors_.clear();
+  for (const auto value : workspaces.array()) {
+    const auto reference = parseHyprlandWorkspaceReference(value.toObject());
+    const QString identity = index.resolve(reference);
+    if (!identity.isEmpty()) {
+      const QString id = reference.isSpecial() ? reference.name : QString::number(reference.id.value_or(0));
+      workspace_ids.insert(identity, id);
+      if (!reference.isSpecial()) {
+        workspace_selectors_.insert(id, *reference.id > 0 ? id : QStringLiteral("name:") + reference.name);
+      }
+      if (!workspace_outputs.contains(identity)) {
+        workspace_outputs.insert(identity, value.toObject().value(QStringLiteral("monitor")).toString());
+      }
+    }
+  }
   for (const HyprlandClientInfo& client : *clients) {
-    if (client.pid == 0 || client.address.isEmpty()) {
+    if (client.address.isEmpty()) {
       continue;
     }
-    snapshot.windows.append(
-        {.id = client.address, .title = client.title, .app_id = client.app_class, .pid = client.pid});
-    activation_candidates.append({.pid = client.pid, .title = client.title});
-    activation_addresses.append(client.address);
+    const QString identity = index.resolve(client.workspace);
+    const QString workspace_id = workspace_ids.value(identity);
+    const QString output = workspace_outputs.value(identity);
+    window_ids_.insert(client.address);
+    snapshot.windows.append({
+        .id = client.address,
+        .title = client.title,
+        .app_id = client.app_class,
+        .outputs = output.isEmpty() ? QStringList{} : QStringList{output},
+        .activated =
+            output == snapshot.focused_output && active_workspaces.contains(identity) && client.focus_history_id == 0,
+        .operations = {WindowCommand::Activate},
+        .pid = client.pid,
+        .workspace_id = workspace_id.isEmpty() ? std::nullopt : std::optional(workspace_id),
+        .layout_rect = client.layout_rect,
+    });
+    if (client.pid != 0) {
+      activation_candidates.append({.pid = client.pid, .title = client.title});
+      activation_addresses.append(client.address);
+    }
   }
   activation_candidates_ = std::move(activation_candidates);
   activation_addresses_ = std::move(activation_addresses);
@@ -429,24 +477,47 @@ WindowActivationResult HyprlandBackend::requestWindowActivation(const WindowActi
     return resolution.result;
   }
   const QString address = activation_addresses_.at(*resolution.candidate_index);
+  switch (activateWindow(address, false)) {
+    case WindowCommandResult::Accepted:
+      return WindowActivationResult::Accepted;
+    case WindowCommandResult::Busy:
+      return WindowActivationResult::Busy;
+    default:
+      return WindowActivationResult::Failed;
+  }
+}
+
+WindowCommandResult HyprlandBackend::requestWindowCommand(const QString& identifier, WindowCommand command) {
+  if (command != WindowCommand::Activate) {
+    return WindowCommandResult::Unsupported;
+  }
+  if (!window_ids_.contains(identifier)) {
+    return WindowCommandResult::InvalidWindow;
+  }
+  return activateWindow(identifier, true);
+}
+
+WindowCommandResult HyprlandBackend::activateWindow(const QString& address, bool revalidate) {
   if (phase_ != Phase::Idle || transport_->hasRunningCommand()) {
     if (pending_window_address_) {
-      return WindowActivationResult::Busy;
+      return WindowCommandResult::Busy;
     }
-    pending_window_address_ = address;
-    return WindowActivationResult::Accepted;
+    pending_window_address_ = PendingWindow{.id = address, .revalidate = revalidate};
+    return WindowCommandResult::Accepted;
   }
   if (!beginWindowActivation(address)) {
     emit snapshotReady({.diagnostic = QStringLiteral("Hyprland window activation transport failed")});
     scheduleRefresh();
-    return WindowActivationResult::Failed;
+    return WindowCommandResult::Failed;
   }
-  return WindowActivationResult::Accepted;
+  return WindowCommandResult::Accepted;
 }
 
 void HyprlandBackend::activateWorkspace(const QString& workspace_id) {
-  if (numbered_.assignments.contains(workspace_id)) {
-    dispatchWorkspace(workspace_id);
+  if (workspace_selectors_.contains(workspace_id)) {
+    dispatchWorkspace(workspace_selectors_.value(workspace_id));
+  } else {
+    activateSpecialWorkspace(workspace_id);
   }
 }
 void HyprlandBackend::activateNumberedSlot(int slot) {
@@ -463,10 +534,10 @@ void HyprlandBackend::activateSpecialWorkspace(const QString& identifier) {
   }
 }
 void HyprlandBackend::dispatchWorkspace(const QString& workspace_id) {
-  const bool special = workspace_id.startsWith(QStringLiteral("special:"));
+  const bool special = workspace_id == QStringLiteral("special") || workspace_id.startsWith(QStringLiteral("special:"));
   bool valid = false;
   workspace_id.toInt(&valid);
-  if (!valid && !special) {
+  if (!valid && !special && !workspace_id.startsWith(QStringLiteral("name:"))) {
     return;
   }
   if (phase_ != Phase::Idle || transport_->hasRunningCommand()) {
@@ -477,7 +548,7 @@ void HyprlandBackend::dispatchWorkspace(const QString& workspace_id) {
   activation_is_special_ = special;
   phase_ = Phase::WorkspaceActivation;
   const QByteArray command = special ? QByteArrayLiteral("dispatch togglespecialworkspace ") +
-                                           workspace_id.sliced(QStringLiteral("special:").size()).toUtf8()
+                                           workspace_id.mid(QStringLiteral("special:").size()).toUtf8()
                                      : QByteArrayLiteral("dispatch workspace ") + workspace_id.toUtf8();
   if (!transport_->runCommand(command)) {
     phase_ = Phase::Idle;

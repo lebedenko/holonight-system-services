@@ -278,3 +278,25 @@ TEST_F(SwayBackendTest, WindowEventsCoalesceAndPublishChangedTitles) {
   EXPECT_EQ(snapshot.windows.first().pid, 42U);
   EXPECT_EQ(request_->bytesAvailable(), 0);
 }
+
+TEST_F(SwayBackendTest, ExactCommandSelectsSameTitleByContainerAndDropsStaleQueuedTarget) {
+  QSignalSpy spy(backend_.get(), &CompositorBackend::snapshotReady);
+  finishRefresh(R"({"type":"root","nodes":[
+    {"type":"con","id":101,"name":"Same","shell":"xdg_shell","nodes":[],"floating_nodes":[]},
+    {"type":"con","id":202,"name":"Same","shell":"xdg_shell","nodes":[],"floating_nodes":[]}
+  ]})");
+
+  EXPECT_EQ(backend_->requestWindowCommand("999", WindowCommand::Activate), WindowCommandResult::InvalidWindow);
+  EXPECT_EQ(backend_->requestWindowCommand("202", WindowCommand::Activate), WindowCommandResult::Accepted);
+  EXPECT_EQ(nextRequest().payload, QByteArrayLiteral("[con_id=202] focus"));
+  writeFrame(request_, 0, R"([{"success":true}])");
+  EXPECT_EQ(nextRequest().type, 1U);
+  EXPECT_EQ(backend_->requestWindowCommand("101", WindowCommand::Activate), WindowCommandResult::Accepted);
+  backend_->activateNumberedSlot(4);
+  writeFrame(request_, 1, R"([{"num":1,"name":"1","output":"DP-1"}])");
+  EXPECT_EQ(nextRequest().type, 3U);
+  writeFrame(request_, 3, R"([{"name":"DP-1","focused":true}])");
+  EXPECT_EQ(nextRequest().type, 4U);
+  writeFrame(request_, 4, R"({"type":"root","nodes":[]})");
+  EXPECT_EQ(nextRequest().payload, QByteArrayLiteral("workspace --no-auto-back-and-forth number 4"));
+}

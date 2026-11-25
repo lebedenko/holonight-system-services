@@ -18,6 +18,7 @@ struct CompositorCapabilities {
   bool focused_output{false};
   bool urgency{false};
   bool occupancy{false};
+  bool window_workspace_membership{false};
 
   bool operator==(const CompositorCapabilities&) const = default;
 };
@@ -54,4 +55,5 @@ struct CompositorSnapshot {
   QList<CompositorWindow> windows;
   QHash<QString, CompositorActiveWindow> active_windows;
   QHash<QString, bool> occupied_outputs;
+  QList<CompositorWorkspace> special_workspaces;
 };

@@ -29,25 +29,46 @@ std::optional<Integer> positiveInteger(const QJsonValue& value) {
   return static_cast<Integer>(number);
 }
 
-void observeSwayWindow(const QJsonObject& node, bool fullscreen, QList<CompositorWindow>* windows) {
+std::optional<QRectF> swayLayoutRect(const QJsonObject& node) {
+  const auto rect = node.value(QStringLiteral("rect")).toObject();
+  const auto x = rect.value(QStringLiteral("x"));
+  const auto y = rect.value(QStringLiteral("y"));
+  const double width = rect.value(QStringLiteral("width")).toDouble();
+  const double height = rect.value(QStringLiteral("height")).toDouble();
+  if (!x.isDouble() || !y.isDouble() || width <= 0 || height <= 0) {
+    return std::nullopt;
+  }
+  return QRectF(x.toDouble(), y.toDouble(), width, height);
+}
+
+void observeSwayWindow(const QJsonObject& node, bool fullscreen, const QString& output, const QString& workspace,
+                       QList<CompositorWindow>* windows) {
   const bool native_leaf = node.value(QStringLiteral("nodes")).isArray() &&
                            node.value(QStringLiteral("floating_nodes")).isArray() &&
                            node.value(QStringLiteral("nodes")).toArray().isEmpty() &&
                            node.value(QStringLiteral("floating_nodes")).toArray().isEmpty();
-  if (node.value("type").toString() == QLatin1String("con") && native_leaf && node.value("app_id").isString() &&
-      node.value("shell").toString() == "xdg_shell") {
-    if (const auto pid = positiveInteger<quint32>(node.value("pid"))) {
-      if (const auto identifier = positiveInteger<quint64>(node.value("id"))) {
-        windows->append({
-            .id = QString::number(*identifier),
-            .title = node.value("name").toString(),
-            .app_id = node.value("app_id").toString(),
-            .fullscreen = fullscreen,
-            .pid = *pid,
-        });
-      }
-    }
+  const auto shell = node.value("shell").toString();
+  const auto identifier = positiveInteger<quint64>(node.value("id"));
+  const auto pid_value = node.value("pid");
+  const auto pid = positiveInteger<quint32>(pid_value);
+  if (node.value("type").toString() != QLatin1String("con") || !native_leaf || !identifier ||
+      (!pid_value.isUndefined() && !pid) ||
+      (shell != QLatin1String("xdg_shell") && shell != QLatin1String("xwayland"))) {
+    return;
   }
+  const auto properties = node.value(QStringLiteral("window_properties")).toObject();
+  windows->append({
+      .id = QString::number(*identifier),
+      .title = node.value("name").toString(),
+      .app_id = node.value("app_id").toString(properties.value(QStringLiteral("class")).toString()),
+      .outputs = output.isEmpty() ? QStringList{} : QStringList{output},
+      .activated = node.value(QStringLiteral("focused")).toBool(),
+      .fullscreen = fullscreen,
+      .operations = {WindowCommand::Activate},
+      .pid = pid.value_or(0),
+      .workspace_id = workspace.isEmpty() ? std::nullopt : std::optional(workspace),
+      .layout_rect = workspace.isEmpty() ? std::nullopt : swayLayoutRect(node),
+  });
 }
 
 void projectSwayWindow(const QJsonObject& node, const QString& output, const QString& workspace, bool project_snapshot,
@@ -91,7 +112,8 @@ void inspectSwayTree(const QJsonObject& node, const QString& output, const QStri
   // Workspace fullscreen_mode is always 1 for i3 IPC compatibility. Only container
   // nodes report actual per-window/fullscreen-subtree state.
   fullscreen = fullscreen || (type == QLatin1String("con") && valid_fullscreen && fullscreen_mode.toDouble() != 0);
-  observeSwayWindow(node, fullscreen, windows);
+  observeSwayWindow(node, fullscreen, project_snapshot ? next_output : QString{},
+                    project_snapshot ? next_workspace : QString{}, windows);
   if (type == QLatin1String("con")) {
     const auto pid = positiveInteger<quint32>(node.value(QStringLiteral("pid")));
     const auto container_id = positiveInteger<quint64>(node.value(QStringLiteral("id")));
@@ -187,12 +209,14 @@ std::optional<SwayRefreshResult> parseSwayRefresh(const QByteArray& workspaces_j
       .connected = true,
       .capabilities =
           {
+              .window_listing = true,
               .workspace_listing = true,
               .workspace_activation = true,
               .active_window = true,
               .focused_output = true,
               .urgency = true,
               .occupancy = true,
+              .window_workspace_membership = true,
           },
   };
   QHash<QString, bool> occupied;
@@ -212,6 +236,7 @@ std::optional<SwayRefreshResult> parseSwayRefresh(const QByteArray& workspaces_j
   NumberedWorkspaceState numbered{.eligible = true};
   QSet<int> seen;
   QHash<QString, QString> names;
+  QHash<QString, QString> ids_by_name;
   for (const auto value : workspaces.array()) {
     const QJsonObject workspace = value.toObject();
     const QString name = workspace.value(QStringLiteral("name")).toString();
@@ -225,6 +250,7 @@ std::optional<SwayRefreshResult> parseSwayRefresh(const QByteArray& workspaces_j
                                    ? QString::number(workspace.value(QStringLiteral("id")).toInteger())
                                    : QStringLiteral("name:") + name;
     names.insert(identifier, name);
+    ids_by_name.insert(name, identifier);
     if (number > 0) {
       numbered.assignments.insert(identifier, number);
     }
@@ -242,6 +268,12 @@ std::optional<SwayRefreshResult> parseSwayRefresh(const QByteArray& workspaces_j
         .urgent = workspace.value(QStringLiteral("urgent")).toBool(false),
         .occupied = occupied.value(name, false),
     });
+  }
+  for (auto& window : snapshot.windows) {
+    if (window.workspace_id) {
+      const auto found = ids_by_name.constFind(*window.workspace_id);
+      window.workspace_id = found == ids_by_name.cend() ? std::nullopt : std::optional(*found);
+    }
   }
   return SwayRefreshResult{
       .snapshot = std::move(snapshot),

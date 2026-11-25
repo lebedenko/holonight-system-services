@@ -4,6 +4,7 @@
 #include <QHash>
 #include <QJsonObject>
 #include <QList>
+#include <QRectF>
 #include <QSet>
 #include <QString>
 
@@ -45,6 +46,7 @@ struct HyprlandClientInfo {
   int workspace_id{0};
   int focus_history_id{0};
   HyprlandWorkspaceReference workspace;
+  std::optional<QRectF> layout_rect;
 };
 
 struct HyprlandOpenWindow {

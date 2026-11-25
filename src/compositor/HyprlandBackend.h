@@ -27,6 +27,7 @@ class HyprlandBackend final : public CompositorBackend,
 
  public:
   void activateWorkspace(const QString& workspace_id) override;
+  WindowCommandResult requestWindowCommand(const QString& identifier, WindowCommand command) override;
   [[nodiscard]] WindowActivationResult requestWindowActivation(const WindowActivationRequest& request) override;
 
  private:
@@ -63,9 +64,16 @@ class HyprlandBackend final : public CompositorBackend,
   QString window_activation_address_;
   bool activation_is_special_{false};
   QString pending_activation_;
+  WindowCommandResult activateWindow(const QString& address, bool revalidate);
+  QSet<QString> window_ids_;
+  QHash<QString, QString> workspace_selectors_;
   QList<WindowActivationCandidate> activation_candidates_;
   QList<QString> activation_addresses_;
-  std::optional<QString> pending_window_address_;
+  struct PendingWindow {
+    QString id;
+    bool revalidate;
+  };
+  std::optional<PendingWindow> pending_window_address_;
   QSet<QString> urgent_addresses_;
   bool refresh_dirty_{false};
   bool refresh_scheduled_{false};
